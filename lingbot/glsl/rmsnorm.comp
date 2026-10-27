@@ -1,0 +1,48 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+// RMSNorm over the last dimension.
+// One workgroup per row; each thread accumulates a strided partial sum.
+// Reference implementation: FP32. A later pass can switch storage to float16.
+layout(local_size_x = 256) in;
+
+layout(std430, set = 0, binding = 0) readonly buffer X { float x[]; };
+layout(std430, set = 0, binding = 1) writeonly buffer Y { float y[]; };
+layout(std430, set = 0, binding = 2) readonly buffer W { float w[]; };
+
+layout(push_constant) uniform PC {
+    uint rows;
+    uint cols;
+    float eps;
+} pc;
+
+shared float partial[256];
+shared float total;
+
+void main() {
+    uint row = gl_WorkGroupID.x;
+    if (row >= pc.rows) return;
+    uint tid = gl_LocalInvocationID.x;
+    uint base = row * pc.cols;
+
+    float acc = 0.0;
+    for (uint i = tid; i < pc.cols; i += 256u) {
+        float v = x[base + i];
+        acc += v * v;
+    }
+    partial[tid] = acc;
+    barrier();
+
+    // tree reduction
+    for (uint stride = 128u; stride > 0u; stride >>= 1u) {
+        if (tid < stride) partial[tid] += partial[tid + stride];
+        barrier();
+    }
+    if (tid == 0u) total = partial[0];
+    barrier();
+
+    float inv = inversesqrt(total / float(pc.cols) + pc.eps);
+    for (uint i = tid; i < pc.cols; i += 256u) {
+        y[base + i] = x[base + i] * inv * w[i];
+    }
+}
