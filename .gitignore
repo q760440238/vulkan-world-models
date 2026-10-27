@@ -1,0 +1,13 @@
+target/
+*.ply
+*.ppm
+*.safetensors
+*.pth
+*.pt
+*.zip
+*.log
+gaussian_splat_full.html
+gaussian_viewer.html
+gaussian_splat_viewer.html
+__pycache__/
+.ipynb_checkpoints/
