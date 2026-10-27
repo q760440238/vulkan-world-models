@@ -1,0 +1,38 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+// Rotary position embedding, pair-wise.
+// x layout: [token, head, dim], dim even.
+// cos/sin layout: [token, dim/2], shared by all heads.
+// This is the 1D/Temporal prototype; the 3D (F,H,W) table is generated on CPU.
+layout(local_size_x = 256) in;
+
+layout(std430, set = 0, binding = 0) buffer X { float x[]; };
+layout(std430, set = 0, binding = 1) readonly buffer C { float cos_tab[]; };
+layout(std430, set = 0, binding = 2) readonly buffer S { float sin_tab[]; };
+
+layout(push_constant) uniform PC {
+    uint tokens;
+    uint heads;
+    uint dim;
+    uint pad;
+} pc;
+
+void main() {
+    uint pair = gl_GlobalInvocationID.x;
+    uint pairs_per_token = pc.dim / 2u;
+    uint total = pc.tokens * pc.heads * pairs_per_token;
+    if (pair >= total) return;
+
+    uint p = pair % pairs_per_token;
+    uint h = (pair / pairs_per_token) % pc.heads;
+    uint t = pair / (pairs_per_token * pc.heads);
+
+    uint base = (t * pc.heads + h) * pc.dim + p * 2u;
+    float a = x[base];
+    float b = x[base + 1u];
+    float c = cos_tab[t * pairs_per_token + p];
+    float s = sin_tab[t * pairs_per_token + p];
+    x[base]     = a * c - b * s;
+    x[base + 1] = a * s + b * c;
+}
