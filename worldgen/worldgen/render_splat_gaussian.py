@@ -19,7 +19,7 @@ def load_ply(path: Path):
 
 
 @njit(parallel=True)
-def render(centers, scales, quats, colors, opacity, W, H, max_radius):
+def render(centers, scales, quats, colors, opacity, W, H, max_radius, max_sigma, max_lat):
     img = np.zeros((H, W, 3), np.float32)
     trans = np.zeros((H, W), np.float32)
     n = centers.shape[0]
@@ -30,6 +30,8 @@ def render(centers, scales, quats, colors, opacity, W, H, max_radius):
             continue
         lon = np.arctan2(x, z)
         lat = np.arcsin(max(-1.0, min(1.0, y / r)))
+        if abs(lat) > np.radians(max_lat):
+            continue
         u = (lon + np.pi) / (2 * np.pi) * W
         v = (lat + np.pi / 2) / np.pi * H
         # quaternion -> rotation matrix
@@ -81,6 +83,8 @@ def render(centers, scales, quats, colors, opacity, W, H, max_radius):
         if det <= 1e-12:
             continue
         l1 = 0.5 * tr + np.sqrt(max(0.25 * tr * tr - det, 0.0))
+        if max_sigma > 0 and np.sqrt(l1) > max_sigma:
+            continue
         rad = int(min(max_radius, max(1.0, 3.0 * np.sqrt(l1))))
         inv_det = 1.0 / det
         u0 = int(np.floor(u))
@@ -121,6 +125,8 @@ def main():
     ap.add_argument("--height", type=int, default=512)
     ap.add_argument("--max-radius", type=int, default=8)
     ap.add_argument("--scale-factor", type=float, default=1.0)
+    ap.add_argument("--max-sigma", type=float, default=0.0)
+    ap.add_argument("--max-lat", type=float, default=90.0)
     args = ap.parse_args()
 
     v = load_ply(Path(args.ply))
@@ -130,7 +136,7 @@ def main():
     colors = np.clip(0.5 + SH_C0 * v[:, 6:9], 0, 1).astype(np.float32)
     opacity = (1.0 / (1.0 + np.exp(-v[:, 16]))).astype(np.float32)
     img = render(centers, (v[:, 10:13] + np.log(args.scale_factor)).astype(np.float32), v[:, 13:17].astype(np.float32),
-                 colors, opacity, args.width, args.height, args.max_radius)
+                 colors, opacity, args.width, args.height, args.max_radius, args.max_sigma, args.max_lat)
     Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8)).save(args.out)
     print("rendered", len(v), "->", args.out)
 
