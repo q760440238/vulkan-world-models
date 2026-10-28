@@ -1,5 +1,6 @@
 models/*
 !models/.gitkeep
+!models/MANIFEST.md
 output/*
 !output/.gitkeep
 tools/*
