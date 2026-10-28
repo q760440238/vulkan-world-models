@@ -64,7 +64,14 @@ remove Fill object repetition.
 ```text
 t2s, 1600x800, 10 steps: 739 s
 output: 1,280,000 splats, 1600x800 pano
-DA-2: input resampled to the fixed 1024x512 ncnn graph, depth upsampled
+
+DA-2 native 1600x800 trace:
+  graph      da2_trace_1600.ncnn.param/.bin
+  time       6.29 s (Vulkan f32)
+  max abs    0.144
+  mean abs   0.0041
+  cosine     0.99954
+
 full 50 steps: roughly 1 hour on this GPU
 ```
 

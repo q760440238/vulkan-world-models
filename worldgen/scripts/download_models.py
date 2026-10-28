@@ -69,6 +69,16 @@ ASSETS = {
         744102084,
         "e7773c23b2d117ac9f5085a92e8df06b46abba05011ac90da33c65b53ea479d9",
     ),
+    "da2/da2_trace_1600.ncnn.param": (
+        None,
+        46271,
+        "9ffbbc8e4348bc712c92a348a86f9b4dc5279e7ca574ef143c2b772173e23d33",
+    ),
+    "da2/da2_trace_1600.ncnn.bin": (
+        None,
+        748136644,
+        "6bd2c96f93258cc5ff8821ce9db7780d331f11902aa4a4ab187f2fbcb1e0e5ba",
+    ),
 }
 
 

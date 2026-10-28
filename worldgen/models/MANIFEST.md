@@ -16,6 +16,8 @@ the validation machine.
 | `da2/model.safetensors` | 1,378,513,064 | `d8ea568fc3dfb7d7432e5b763de499dd03fb6dc1c2020d84639f35e2dfa4f78e` |
 | `da2/da2_trace_1024.ncnn.param` | 46,271 | `cd0a3fcb3d8e143e7b65e6706a15d60467bdf6e49bc584c4351bfbcd9436ac86` |
 | `da2/da2_trace_1024.ncnn.bin` | 744,102,084 | `e7773c23b2d117ac9f5085a92e8df06b46abba05011ac90da33c65b53ea479d9` |
+| `da2/da2_trace_1600.ncnn.param` | 46,271 | `9ffbbc8e4348bc712c92a348a86f9b4dc5279e7ca574ef143c2b772173e23d33` |
+| `da2/da2_trace_1600.ncnn.bin` | 748,136,644 | `6bd2c96f93258cc5ff8821ce9db7780d331f11902aa4a4ab187f2fbcb1e0e5ba` |
 
 Notes:
 

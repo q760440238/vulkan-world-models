@@ -12,12 +12,17 @@ MODELS = Path(os.environ.get("WORLDGEN_MODELS", ROOT / "models"))
 EXE = Path(os.environ.get("DA2_NCNN_EXE", ROOT / "tools/da2-ncnn/da2ncnn.exe"))
 PARAM = MODELS / "da2/da2_trace_1024.ncnn.param"
 BIN = MODELS / "da2/da2_trace_1024.ncnn.bin"
+PARAM_1600 = MODELS / "da2/da2_trace_1600.ncnn.param"
+BIN_1600 = MODELS / "da2/da2_trace_1600.ncnn.bin"
 NCNN_DLL = Path(os.environ.get("NCNN_DLL_DIR", ROOT / "tools/ncnn/src"))
 
 
 def depth(pano: Image.Image, width: int = 1024, height: int = 512) -> np.ndarray:
-    """Run DA-2 at its fixed 1024x512 trace size; resample other sizes."""
-    rw, rh = 1024, 512
+    """Run DA-2 through ncnn Vulkan; 1600x800 uses its own trace."""
+    if width == 1600 and height == 800:
+        param, binp, rw, rh = PARAM_1600, BIN_1600, 1600, 800
+    else:
+        param, binp, rw, rh = PARAM, BIN, 1024, 512
     arr = np.asarray(pano.convert("RGB").resize((rw, rh))).astype("<f4") / 255.0
     nchw = np.ascontiguousarray(arr.transpose(2, 0, 1))
     tmp_in = ROOT / "output" / "_da2_in.f32"
@@ -27,7 +32,7 @@ def depth(pano: Image.Image, width: int = 1024, height: int = 512) -> np.ndarray
     env = dict(os.environ)
     env["PATH"] = str(NCNN_DLL) + os.pathsep + env.get("PATH", "")
     subprocess.run(
-        [str(EXE), str(PARAM), str(BIN), str(tmp_in), str(tmp_out),
+        [str(EXE), str(param), str(binp), str(tmp_in), str(tmp_out),
          str(rw), str(rh), "vulkan"],
         check=True,
         env=env,
