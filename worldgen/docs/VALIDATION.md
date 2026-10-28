@@ -81,11 +81,15 @@ Default mesh is now a **voxel signed-distance field + marching cubes**
 (`worldgen_mesh.py --method voxel`):
 
 ```text
-voxel-res 0.25, voxel-stride 4
-52k verts / 104k tris
+voxel-res 0.25, voxel-stride 4, median 5, trim-poles 0.02
+52k verts / 103k tris
 ~3.3 s at 1024x512
-i2s end-to-end 20 steps: 69.8 s (vs 61.5 s shell)
+i2s end-to-end 20 steps: ~70 s (vs 61.5 s shell)
 ```
+
+The median filter + pole trim removes the small top tab; the left depth
+discontinuity still folds into a second surface. This is a large improvement
+over the needle-like shell but not a fully clean reconstruction.
 
 Poisson/Ball/Alpha are available but were not better:
 

@@ -90,7 +90,7 @@ def main():
             "--out", str(out / "scene/mesh.ply"),
             "--width", str(args.width), "--height", str(args.height),
             "--method", "voxel", "--voxel-res", "0.25", "--voxel-stride", "4",
-            "--largest-component",
+            "--median", "5", "--trim-poles", "0.02", "--largest-component",
         ])
     print("done", out)
 
