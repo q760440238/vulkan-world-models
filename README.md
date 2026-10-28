@@ -11,6 +11,7 @@ Hugging Face 模型页：
 - HunyuanWorld：<https://huggingface.co/kylinfires/hunyuanworld-vulkan>
 - LingBot：<https://huggingface.co/kylinfires/lingbot-world-vulkan>
 - 3DGS / VkSplat：<https://huggingface.co/kylinfires/gaussian-splatting-vulkan>
+- WorldGen：<https://huggingface.co/kylinfires/worldgen-vulkan>
 
 ---
 
@@ -18,7 +19,7 @@ Hugging Face 模型页：
 
 ## 项目简介
 
-本仓库包含四条工作线：
+本仓库包含五条工作线：
 
 1. **LingBot-World 1.3B Vulkan kernel port（部分完成）**
    - Rust + wgpu/Vulkan
@@ -47,6 +48,14 @@ Hugging Face 模型页：
    - Camera head + 4 个 DPT head + 3DGS 参数化
    - TSDF / Poisson mesh、内置 3DGS 渲染与 turntable
    - 不依赖 CUDA / PyTorch / gsplat
+
+5. **WorldGen Vulkan 推理移植**
+   - text / single image → 360° 全景 → 3DGS / mesh
+   - FLUX.1-dev / FLUX.1-Fill-dev（stable-diffusion.cpp Vulkan）
+   - DA-2 depth（ncnn Vulkan，0 自定义层）
+   - Rust RGBD → 3DGS / mesh
+   - 1024×512、20 steps：t2s 56.7s，i2s 61.5s
+   - 详见 [worldgen/README.md](worldgen/README.md)
 
 ## 结果
 
@@ -241,6 +250,7 @@ Hugging Face model pages:
 - HunyuanWorld: <https://huggingface.co/kylinfires/hunyuanworld-vulkan>
 - LingBot: <https://huggingface.co/kylinfires/lingbot-world-vulkan>
 - 3DGS / VkSplat: <https://huggingface.co/kylinfires/gaussian-splatting-vulkan>
+- WorldGen: <https://huggingface.co/kylinfires/worldgen-vulkan>
 
 It contains:
 
@@ -271,6 +281,14 @@ It contains:
    - camera head + four DPT heads + 3DGS parameterization
    - TSDF/Poisson mesh, built-in 3DGS render and turntable
    - no CUDA / PyTorch / gsplat
+
+5. **WorldGen Vulkan inference**
+   - text / single image → 360° panorama → 3DGS / mesh
+   - FLUX.1-dev / FLUX.1-Fill-dev (stable-diffusion.cpp Vulkan)
+   - DA-2 depth (ncnn Vulkan, 0 custom layers)
+   - Rust RGBD → 3DGS / mesh
+   - 1024x512, 20 steps: t2s 56.7 s, i2s 61.5 s
+   - see [worldgen/README.md](worldgen/README.md)
 
 ## Results
 

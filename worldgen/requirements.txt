@@ -1,0 +1,5 @@
+numpy>=1.26
+Pillow>=10.0
+# Conversion only (not needed for inference):
+# torch>=2.7
+# safetensors>=0.4

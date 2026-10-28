@@ -1,0 +1,15 @@
+WorldGen Vulkan
+Copyright 2026 contributors
+
+This product includes software and model-derived work from:
+
+- WorldGen (LeoXie/WorldGen), Apache-2.0
+- DA-2 (ZiyangXie/DA-2), see upstream license
+- FLUX.1-dev and FLUX.1-Fill-dev, Black Forest Labs non-commercial license
+- stable-diffusion.cpp, MIT
+- ncnn, BSD-3-Clause
+- pnnx, Apache-2.0
+- Rust `image` crate, MIT/Apache-2.0
+
+Model weights are NOT distributed with this repository. Users must obtain
+them from their upstream sources and comply with the corresponding licenses.
