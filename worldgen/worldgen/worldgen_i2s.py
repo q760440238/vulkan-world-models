@@ -1,4 +1,4 @@
-"""Single image -> FLUX Fill panorama -> DA-2 depth -> Rust 3DGS/mesh."""
+﻿"""Single image -> FLUX Fill panorama -> DA-2 depth -> Rust 3DGS/mesh."""
 
 import argparse
 import os
@@ -185,7 +185,7 @@ def main():
         run([
             sys.executable, str(ROOT / "worldgen/worldgen_make14.py"),
             "--ply", str(out / "scene/gaussians.ply"), "--out", str(ply14),
-            "--width", str(args.width), "--height", str(args.height), "--rgb",
+            "--width", str(args.width), "--height", str(args.height), "--rgb", "--pitch", "-15",
         ])
         run([str(GPU_SPLAT), str(ply14), "0", str(out / "splat.png"), "0.2"])
 
@@ -194,3 +194,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
