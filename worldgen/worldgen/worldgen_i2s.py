@@ -1,28 +1,46 @@
-"""Single image -> FLUX Fill panorama -> DA-2 depth -> Rust 3DGS/mesh."""
-
 import argparse
-import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image
 from plyfile import PlyData, PlyElement
+from worldgen_da2 import depth as _da2_depth
 
-from worldgen_da2 import depth as da2_depth
-
-ROOT = Path(__file__).resolve().parents[1]
-MODELS = Path(os.environ.get("WORLDGEN_MODELS", ROOT / "models"))
-FLUX = MODELS / "flux-dev"
-SD = Path(os.environ.get("SD_CLI", ROOT / "tools/sd-cli.exe"))
-WG = Path(os.environ.get("WORLDGEN_VK", ROOT / "tools/worldgen-vk/worldgen-vk.exe"))
+ROOT = Path(r"D:\3DWord\itseez3d\ai-lab\worldgen")
+DA2_SRC = ROOT / "src/submodules/DA-2/src"
+WFG = ROOT / "port/worldgen-vk/target/release/worldgen-vk.exe"
+PY = sys.executable
+CONFIG = {
+    "inference": {"min_pixels": 580000, "max_pixels": 620000},
+    "spherevit": {
+        "vit_w_esphere": {
+            "input_dims": [1024, 1024, 1024, 1024],
+            "hidden_dim": 512,
+            "num_heads": 8,
+            "expansion": 4,
+            "num_layers_head": [2, 2, 2],
+            "dropout": 0.0,
+            "layer_scale": 0.0001,
+            "out_dim": 64,
+            "kernel_size": 3,
+            "num_prompt_blocks": 1,
+            "use_norm": False,
+        },
+        "sphere": {"width": 1092, "height": 546, "hfov": 6.2832, "vfov": 3.1416},
+    },
+}
 
 
 def run(cmd):
     print("+", " ".join(str(c) for c in cmd), flush=True)
     subprocess.run(cmd, check=True)
+
+
+def da2_depth(pano: Image.Image, width: int = 1024, height: int = 512) -> np.ndarray:
+    return _da2_depth(pano, width, height)
 
 
 def foreground_mask(image_path: str, width: int, height: int) -> np.ndarray:
@@ -35,13 +53,14 @@ def foreground_mask(image_path: str, width: int, height: int) -> np.ndarray:
     bgd = np.zeros((1, 65), np.float64)
     fgd = np.zeros((1, 65), np.float64)
     cv2.grabCut(img, gc, rect, bgd, fgd, 5, cv2.GC_INIT_WITH_RECT)
-    fg = np.where((gc == 1) | (gc == 3), 255, 0).astype(np.uint8)
+    fg_small = np.where((gc == 1) | (gc == 3), 255, 0).astype(np.uint8)
     pw = width // 4
-    fg = cv2.resize(fg, (pw, height), interpolation=cv2.INTER_NEAREST)
-    full = np.zeros((height, width), np.uint8)
+    fg_small = cv2.resize(fg_small, (pw, height), interpolation=cv2.INTER_NEAREST)
+    fg = np.zeros((height, width), np.uint8)
     x0 = (width - pw) // 2
-    full[:, x0:x0 + pw] = fg
-    return cv2.dilate(full, np.ones((5, 5), np.uint8), iterations=2)
+    fg[:, x0:x0 + pw] = fg_small
+    fg = cv2.dilate(fg, np.ones((5, 5), np.uint8), iterations=2)
+    return fg
 
 
 def merge_splat(base_path: Path, bg_path: Path, mask: np.ndarray, out_path: Path) -> int:
@@ -49,8 +68,9 @@ def merge_splat(base_path: Path, bg_path: Path, mask: np.ndarray, out_path: Path
     bg = PlyData.read(str(bg_path))
     bv = base["vertex"].data
     gv = bg["vertex"].data
-    if len(gv) != mask.size or len(bv) != mask.size:
-        raise RuntimeError(f"splat vertex count mismatch: base={len(bv)} bg={len(gv)} mask={mask.size}")
+    n = mask.size
+    if len(gv) != n or len(bv) != n:
+        raise RuntimeError(f"splat vertex count mismatch: base={len(bv)} bg={len(gv)} mask={n}")
     merged = np.concatenate([bv, gv[mask.reshape(-1) > 0]], axis=0)
     PlyData([PlyElement.describe(merged, "vertex")]).write(str(out_path))
     return len(merged)
@@ -64,87 +84,104 @@ def main():
     ap.add_argument("--width", type=int, default=1024)
     ap.add_argument("--height", type=int, default=512)
     ap.add_argument("--steps", type=int, default=20)
-    ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--gguf", default=str(MODELS / "flux-fill/flux-fill-official-q4.gguf"))
+    ap.add_argument("--mode", choices=["fill", "composite"], default="fill")
     ap.add_argument("--inpaint-bg", action="store_true")
-    ap.add_argument("--keep-fg", action="store_true")
-    ap.add_argument("--mesh-shell", action="store_true")
+    ap.add_argument("--keep-fg", action="store_true", help="keep foreground object in Fill condition")
+    ap.add_argument("--mesh-shell", action="store_true", help="keep the Rust equirectangular shell mesh")
     args = ap.parse_args()
-
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     prep = out / "prep"
-    run([
-        sys.executable, str(ROOT / "worldgen/worldgen_i2s_prep.py"),
-        "--image", args.image, "--out", str(prep),
-        "--width", str(args.width), "--height", str(args.height),
-    ])
+    t2s = out / "generated"
 
-    prompt = (
-        "A high quality 360 panorama photo of, "
-        + args.prompt
-        + ", HDR, RAW, 360 consistent, omnidirectional"
-        + " <lora:worldgen_img2scene:1>"
-    )
-    run([
-        str(SD),
-        "--diffusion-model", args.gguf,
-        "--vae", str(FLUX / "ae.safetensors"),
-        "--clip_l", str(FLUX / "clip_l.safetensors"),
-        "--t5xxl", str(FLUX / "t5xxl_fp8_e4m3fn.safetensors"),
-        "-i", str(prep / ("cond.png" if args.keep_fg or not (prep / "cond_clean.png").exists() else "cond_clean.png")),
-        "--mask", str(prep / "mask.png"),
-        "-p", prompt,
-        "-n", "blurry, low quality",
-        "--lora-model-dir", str(FLUX),
-        "-W", str(args.width), "-H", str(args.height),
-        "--steps", str(args.steps),
-        "--cfg-scale", "1.0",
-        "--guidance", "30.0",
-        "--sampling-method", "euler",
-        "--strength", "1.0",
-        "--seed", str(args.seed),
-        "--vae-tiling",
-        "--vae-tile-size", "512x512",
-        "--backend", "diffusion=vulkan0",
-        "-o", str(out / "pano_fill.png"),
-    ])
+    run([PY, str(ROOT / "tools/worldgen_i2s_prep.py"),
+         "--image", args.image, "--out", str(prep),
+         "--width", str(args.width), "--height", str(args.height)])
 
-    g_img = Image.open(out / "pano_fill.png").convert("RGB")
-    c_img = Image.open(prep / "cond.png").convert("RGB")
-    mask_img = Image.open(prep / "mask.png").convert("L")
-    try:
-        import cv2
-        g_bgr = cv2.cvtColor(np.asarray(g_img), cv2.COLOR_RGB2BGR)
-        c_bgr = cv2.cvtColor(np.asarray(c_img), cv2.COLOR_RGB2BGR)
-        valid_mask = 255 - np.asarray(mask_img)
-        ys, xs = np.where(valid_mask > 128)
-        center = (int((xs.min() + xs.max()) / 2), int((ys.min() + ys.max()) / 2))
-        pano = cv2.seamlessClone(c_bgr, g_bgr, valid_mask, center, cv2.NORMAL_CLONE)
-        pano = cv2.cvtColor(pano, cv2.COLOR_BGR2RGB)
-    except Exception:
-        g = np.asarray(g_img).astype(np.float32)
-        c = np.asarray(c_img).astype(np.float32)
-        m = mask_img.filter(ImageFilter.GaussianBlur(24))
-        valid = (1.0 - np.asarray(m).astype(np.float32) / 255.0)[..., None]
+    if args.mode == "fill":
+        models = ROOT / "models"
+        prompt = (
+            "A high quality 360 panorama photo of, "
+            + args.prompt
+            + ", HDR, RAW, 360 consistent, omnidirectional"
+            + " <lora:worldgen_img2scene:1>"
+        )
+        run([
+            str(ROOT / "tools/sd-build2/bin/sd-cli.exe"),
+            "--diffusion-model", str(models / "flux-fill2/flux-fill-official-q4.gguf"),
+            "--vae", str(models / "flux-dev/ae.safetensors"),
+            "--clip_l", str(models / "flux-dev/clip_l.safetensors"),
+            "--t5xxl", str(models / "flux-dev/t5xxl_fp8_e4m3fn.safetensors"),
+            "-i", str(prep / ("cond.png" if args.keep_fg or not (prep / "cond_clean.png").exists() else "cond_clean.png")),
+            "--mask", str(prep / "mask.png"),
+            "-p", prompt,
+            "-n", "blurry, low quality",
+            "--lora-model-dir", str(models / "flux-dev"),
+            "-W", str(args.width), "-H", str(args.height),
+            "--steps", str(args.steps),
+            "--cfg-scale", "1.0",
+            "--guidance", "30.0",
+            "--sampling-method", "euler",
+            "--strength", "1.0",
+            "--seed", "42",
+            "--vae-tiling",
+            "--vae-tile-size", "512x512",
+            "--backend", "diffusion=vulkan0",
+            "-o", str(out / "pano_fill.png"),
+        ])
+        # WorldGen composites the original image back over the filled pano;
+        # Fill is used for the surrounding scene, not for the input pixels.
+        from PIL import ImageFilter
+        g_img = Image.open(out / "pano_fill.png").convert("RGB")
+        c_img = Image.open(prep / "cond.png").convert("RGB")
+        mask_img = Image.open(prep / "mask.png").convert("L")
+        try:
+            import cv2
+            g_bgr = cv2.cvtColor(np.asarray(g_img), cv2.COLOR_RGB2BGR)
+            c_bgr = cv2.cvtColor(np.asarray(c_img), cv2.COLOR_RGB2BGR)
+            valid_mask = 255 - np.asarray(mask_img)
+            ys, xs = np.where(valid_mask > 128)
+            center = (int((xs.min() + xs.max()) / 2), int((ys.min() + ys.max()) / 2))
+            pano = cv2.seamlessClone(c_bgr, g_bgr, valid_mask, center, cv2.NORMAL_CLONE)
+            pano = cv2.cvtColor(pano, cv2.COLOR_BGR2RGB)
+        except Exception:
+            # Fallback when OpenCV is not installed: feathered alpha blend.
+            g = np.asarray(g_img).astype(np.float32)
+            c = np.asarray(c_img).astype(np.float32)
+            feather = mask_img.filter(ImageFilter.GaussianBlur(24))
+            valid = (1.0 - np.asarray(feather).astype(np.float32) / 255.0)[..., None]
+            pano = (g * (1.0 - valid) + c * valid).clip(0, 255).astype(np.uint8)
+        Image.fromarray(pano).save(out / "pano.png")
+    else:
+        run([PY, str(ROOT / "tools/worldgen_t2s.py"),
+             "--prompt", args.prompt, "--out", str(t2s),
+             "--width", str(args.width), "--height", str(args.height),
+             "--steps", str(args.steps)])
+        gen = Image.open(t2s / "pano.png").convert("RGB")
+        cond = Image.open(prep / "cond.png").convert("RGB")
+        mask = Image.open(prep / "mask.png").convert("L")
+        # Feather the valid region so the pasted photo blends into the generated
+        # panorama instead of showing a hard rectangular seam.
+        from PIL import ImageFilter
+        feather = mask.filter(ImageFilter.GaussianBlur(24))
+        g = np.asarray(gen).astype(np.float32)
+        c = np.asarray(cond).astype(np.float32)
+        valid = (1.0 - np.asarray(feather).astype(np.float32) / 255.0)[..., None]
         pano = (g * (1.0 - valid) + c * valid).clip(0, 255).astype(np.uint8)
-    Image.fromarray(pano).save(out / "pano.png")
+        Image.fromarray(pano).save(out / "pano.png")
 
-    d = da2_depth(Image.fromarray(pano), args.width, args.height)
+    pano = Image.open(out / "pano.png").convert("RGB")
+    d = da2_depth(pano, args.width, args.height)
     d.astype("<f4").tofile(out / "depth.f32")
-    run([
-        str(WG), "both",
-        "--pano", str(out / "pano.png"),
-        "--depth", str(out / "depth.f32"),
-        "--width", str(args.width),
-        "--height", str(args.height),
-        "--out", str(out / "scene"),
-    ])
+    run([str(WFG), "both", "--pano", str(out / "pano.png"),
+         "--depth", str(out / "depth.f32"),
+         "--width", str(args.width), "--height", str(args.height),
+         "--out", str(out / "scene")])
 
     if not args.mesh_shell:
         shutil.copy2(out / "scene/mesh.ply", out / "scene/mesh_shell.ply")
         run([
-            sys.executable, str(ROOT / "worldgen/worldgen_mesh.py"),
+            PY, str(ROOT / "tools/worldgen_mesh.py"),
             "--pano", str(out / "pano.png"),
             "--depth", str(out / "depth.f32"),
             "--out", str(out / "scene/mesh.ply"),
@@ -157,11 +194,20 @@ def main():
     if args.inpaint_bg:
         import cv2
         fg = foreground_mask(args.image, args.width, args.height)
-        pano_bg = cv2.inpaint(np.asarray(pano)[:, :, ::-1], fg, 3, cv2.INPAINT_TELEA)[:, :, ::-1]
+        pano_rgb = np.asarray(pano)
+        pano_bg = cv2.inpaint(pano_rgb[:, :, ::-1], fg, 3, cv2.INPAINT_TELEA)[:, :, ::-1]
         Image.fromarray(pano_bg).save(out / "pano_bg.png")
         bg_depth = da2_depth(Image.fromarray(pano_bg), args.width, args.height)
+        # Match the background depth scale to the original depth outside the
+        # foreground, as WorldGen's depth_match does.
+        valid_bg = fg == 0
+        if valid_bg.any() and bg_depth[valid_bg].size:
+            med0 = float(np.median(d[valid_bg]))
+            med1 = float(np.median(bg_depth[valid_bg]))
+            if med1 > 1e-6:
+                bg_depth = bg_depth * (med0 / med1)
         bg_depth.astype("<f4").tofile(out / "depth_bg.f32")
-        run([str(WG), "splat", "--pano", str(out / "pano_bg.png"),
+        run([str(WFG), "splat", "--pano", str(out / "pano_bg.png"),
              "--depth", str(out / "depth_bg.f32"),
              "--width", str(args.width), "--height", str(args.height),
              "--out", str(out / "scene_bg")])
