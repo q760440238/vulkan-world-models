@@ -203,6 +203,8 @@ DA-2 原始模型是 PyTorch。仓库提供：
 
 关键点：runner 必须用 `-DNCNN_VULKAN` 编译，并调用
 `net.set_vulkan_device(0)`，否则 ncnn 会回退 CPU。
+导出的 param 已把最后一个 `Squeeze` 换成 `Reshape`，当前 CPU-fallback
+层数为 **0 / 581**。
 
 ## Official reference
 

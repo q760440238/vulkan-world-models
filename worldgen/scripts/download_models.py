@@ -61,8 +61,8 @@ ASSETS = {
     ),
     "da2/da2_trace_1024.ncnn.param": (
         None,
-        46271,
-        "cd0a3fcb3d8e143e7b65e6706a15d60467bdf6e49bc584c4351bfbcd9436ac86",
+        46856,
+        "8e24dd92f2bd6beb8e5053f798243aa7e9c2cc8d2884d7d5007d06743ac17c5c",
     ),
     "da2/da2_trace_1024.ncnn.bin": (
         None,
@@ -71,8 +71,8 @@ ASSETS = {
     ),
     "da2/da2_trace_1600.ncnn.param": (
         None,
-        46271,
-        "9ffbbc8e4348bc712c92a348a86f9b4dc5279e7ca574ef143c2b772173e23d33",
+        46856,
+        "615c3ee66f625c0831e9b7200dc2f0afa929d6589f6ea6a06cdbb83a77ce0966",
     ),
     "da2/da2_trace_1600.ncnn.bin": (
         None,

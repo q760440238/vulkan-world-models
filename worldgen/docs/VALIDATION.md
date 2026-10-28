@@ -193,10 +193,10 @@ cosine    0.9999994
 time      3.05 s (f32 Vulkan)
 ```
 
-The ncnn graph has **0 custom layers**. The runner must be compiled with
-`-DNCNN_VULKAN` and must call `net.set_vulkan_device(0)`; otherwise ncnn
-silently falls back to CPU (the earlier 8.7 s result). The fixed trace
-resolution is 1024x512; other pano sizes are resampled.
+The ncnn graph has **0 custom layers and 0 CPU-fallback layers**: the final
+`Squeeze` was replaced by a `Reshape` (`0=1024 1=512`, or `1600 800` for the
+1600 trace). The runner must be compiled with `-DNCNN_VULKAN` and call
+`net.set_vulkan_device(0)`; otherwise ncnn silently falls back to CPU.
 
 ### Latency (1024x512, 20 steps, RX 6900 XT)
 
