@@ -75,6 +75,20 @@ DA-2 native 1600x800 trace:
 full 50 steps: roughly 1 hour on this GPU
 ```
 
+### Clean builds from source
+
+Tested with local source checkouts (same scripts also clone when `-Source` is
+omitted):
+
+```text
+build_sd.ps1 -Source <stable-diffusion.cpp>   -> build-sd/bin/Release/sd-cli.exe
+build_da2.ps1 -Source <ncnn>                  -> tools/da2-ncnn/da2ncnn.exe + ncnn.dll
+build_rust.ps1                                -> tools/worldgen-vk/worldgen-vk.exe
+```
+
+`sd-cli.exe --list-devices` reports `Vulkan0  AMD Radeon RX 6900 XT`; the
+freshly built DA-2 runner reproduces the 1024x512 output on the same GPU.
+
 ### DA-2 numeric and performance
 
 ncnn Vulkan vs PyTorch, 1024x512:

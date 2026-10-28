@@ -94,9 +94,11 @@ FLUX.1-dev / FLUX.1-Fill-dev 权重受 Black Forest Labs 非商业许可证约�
 ```powershell
 # 1. stable-diffusion.cpp（Vulkan）
 scripts/build_sd.ps1
+# 也可指定本地 source，跳过 clone：scripts/build_sd.ps1 -Source <dir>
 
 # 2. ncnn + DA-2 runner
 scripts/build_da2.ps1
+# scripts/build_da2.ps1 -Source <ncnn-dir>
 
 # 3. Rust 后处理
 scripts/build_rust.ps1

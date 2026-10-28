@@ -17,6 +17,9 @@ tools/*
 *.lib
 *.pdb
 build/
+build-sd/
+build-ncnn/
+third_party/
 target/
 __pycache__/
 .venv/
