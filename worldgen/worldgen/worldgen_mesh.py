@@ -84,7 +84,7 @@ def tsdf_mesh(rgb: np.ndarray, depth: np.ndarray, face: int, voxel: float, trunc
 
 
 def voxel_tsdf(points: np.ndarray, normals: np.ndarray, colors: np.ndarray,
-               res: float, trunc: float, smooth: int = 1):
+               res: float, trunc: float, smooth: float = 1.0):
     """Signed-distance voxel field + marching cubes (a simple TSDF)."""
     from scipy.ndimage import gaussian_filter
     from skimage.measure import marching_cubes
@@ -137,6 +137,7 @@ def main():
     ap.add_argument("--voxel-res", type=float, default=0.2)
     ap.add_argument("--voxel-trunc", type=float, default=0.4)
     ap.add_argument("--voxel-stride", type=int, default=1)
+    ap.add_argument("--voxel-smooth", type=float, default=1.0)
     ap.add_argument("--face-size", type=int, default=512)
     ap.add_argument("--voxel-size", type=float, default=0.1)
     ap.add_argument("--sdf-trunc", type=float, default=0.2)
@@ -200,7 +201,8 @@ def main():
 
     if args.method == "voxel":
         s = max(1, args.voxel_stride)
-        mesh = voxel_tsdf(pts[::s], n[::s], colors[::s], args.voxel_res, args.voxel_trunc)
+        mesh = voxel_tsdf(pts[::s], n[::s], colors[::s], args.voxel_res,
+                          args.voxel_trunc, args.voxel_smooth)
         dens = np.zeros(0)
     elif args.method == "tsdf":
         mesh = tsdf_mesh(rgb, depth, args.face_size, args.voxel_size, args.sdf_trunc)

@@ -125,7 +125,7 @@ py -3 worldgen\worldgen_mesh.py `
   --pano output\rainforest\pano.png `
   --depth output\rainforest\depth.f32 `
   --out output\rainforest\scene\mesh.ply `
-  --width 1024 --height 512 --method voxel --voxel-res 0.25 --voxel-stride 4 --median 5 --trim-poles 0.02 --largest-component
+  --width 1024 --height 512 --method voxel --voxel-res 0.25 --voxel-stride 4 --median 5 --trim-poles 0.02 --voxel-smooth 2.5 --largest-component
 ```
 
 输出：
