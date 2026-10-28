@@ -143,6 +143,7 @@ def main():
     ap.add_argument("--largest-component", action="store_true")
     ap.add_argument("--normal-outward", action="store_true")
     ap.add_argument("--median", type=int, default=0)
+    ap.add_argument("--trim-poles", type=float, default=0.0)
     args = ap.parse_args()
 
     t0 = time.time()
@@ -156,6 +157,12 @@ def main():
     pts = (rs * depth[..., None]).reshape(-1, 3)
     colors = rgb.reshape(-1, 3)
     valid = np.isfinite(pts).all(axis=1) & (depth.reshape(-1) > 1e-4)
+    if args.trim_poles > 0:
+        k = max(1, int(h * args.trim_poles))
+        v2 = valid.reshape(h, w)
+        v2[:k] = False
+        v2[-k:] = False
+        valid = v2.reshape(-1)
     pts = pts[valid]
     colors = colors[valid]
 
