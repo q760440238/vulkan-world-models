@@ -122,6 +122,10 @@ or tiny orbit view); this is a viewer camera issue, not a PLY/numeric issue.
 The 3DGS center/scale/quaternion formula is validated at ~1e-7 against the
 WorldGen Python reference.
 
+`render_splat_gaussian.py` adds the 3D covariance and alpha compositing for an
+equirect image. It reconstructs the official painting pano with correct
+colors/geometry; high-latitude sky splats still show a few large blue blobs.
+
 ### Fill foreground cleaning
 
 By default `worldgen_i2s_prep.py` writes `cond_clean.png`: GrabCut foreground

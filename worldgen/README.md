@@ -157,6 +157,17 @@ py -3 worldgen\render_splat_points.py `
 
 这是点渲染预览，不是带 covariance 的最终 3DGS 合成；颜色/几何已可对照官方 demo。
 
+带 covariance 的 equirect 3DGS 合成：
+
+```powershell
+py -3 worldgen\render_splat_gaussian.py `
+  --ply output\rainforest\scene\gaussians.ply `
+  --out output\rainforest\gauss_equirect.png `
+  --width 1024 --height 512 --scale-factor 0.5
+```
+
+![3DGS equirect](docs/assets/gauss_equirect.png)
+
 ## DA-2 转换
 
 DA-2 原始模型是 PyTorch。仓库提供：
