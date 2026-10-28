@@ -1,3 +1,19 @@
+---
+license: apache-2.0
+language:
+  - zh
+  - en
+library_name: worldgen-vulkan
+tags:
+  - vulkan
+  - amd
+  - no-cuda
+  - flux
+  - worldgen
+  - gaussian-splatting
+  - 3d-generation
+---
+
 # WorldGen Vulkan
 
 **中文** | [English](#english)
