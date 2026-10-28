@@ -30,8 +30,8 @@ prompt / image
 ```
 
 > 这不是官方 WorldGen 的逐字节复刻。默认 1024x512 路径已经跑通；
-> 画质、1600x800、`use_sharp` / `inpaint_bg` 仍未完成。详见
-> [docs/VALIDATION.md](docs/VALIDATION.md)。
+> 画质、`use_sharp` 仍未完成；1600x800 和简化的 `inpaint_bg` 已接。
+> 详见 [docs/VALIDATION.md](docs/VALIDATION.md)。
 
 ## 性能（RX 6900 XT, 1024x512, 20 steps）
 
@@ -117,6 +117,7 @@ py -3 worldgen\worldgen_i2s.py `
   --image path\to\photo.jpg `
   --prompt "a lush rainforest with gorillas" `
   --out output\rainforest --width 1024 --height 512 --steps 20
+# 可选：--inpaint-bg（GrabCut + OpenCV 背景 + splat merge）
 ```
 
 输出：
@@ -158,7 +159,9 @@ demo uses the full PyTorch pipeline and a different prompt/seed.
 
 - Fill 会重复物体，竖带边界可见，mesh 有拉伸
 - 默认只验证 1024x512；1600x800 需重新 trace DA-2 或接受 resample
-- `use_sharp=True`、`inpaint_bg=True` 未接
+- `use_sharp=True` 未接（需要 SHARP 模型和单独移植）
+- `inpaint_bg` 是简化实现：GrabCut 前景 + OpenCV Telea 背景 + DA-2 + splat merge，
+  不是官方 OneFormer + FLUX Fill 版本
 - 没有官方 WorldGen 全链路视觉对拍
 - 不是官方实现，不代表 BFL / WorldGen 作者背书
 

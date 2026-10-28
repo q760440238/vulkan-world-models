@@ -75,6 +75,22 @@ DA-2 native 1600x800 trace:
 full 50 steps: roughly 1 hour on this GPU
 ```
 
+### inpaint_bg (simplified)
+
+`worldgen_i2s.py --inpaint-bg`:
+
+```text
+GrabCut foreground mask
+-> OpenCV Telea background inpaint
+-> DA-2 depth on background
+-> worldgen-vk splat
+-> merge foreground splats + background splats in the foreground mask
+```
+
+Test: 1024x512, 5 steps, 524,288 base splats + 20,529 background splats
+= 544,817 merged vertices. This is not the official OneFormer + FLUX Fill
+branch; it is a CPU/OpenCV approximation.
+
 ### Clean builds from source
 
 Tested with local source checkouts (same scripts also clone when `-Source` is

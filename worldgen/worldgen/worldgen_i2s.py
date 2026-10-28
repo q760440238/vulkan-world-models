@@ -2,12 +2,14 @@
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageFilter
+from plyfile import PlyData, PlyElement
 
 from worldgen_da2 import depth as da2_depth
 
@@ -23,6 +25,37 @@ def run(cmd):
     subprocess.run(cmd, check=True)
 
 
+def foreground_mask(image_path: str, width: int, height: int) -> np.ndarray:
+    import cv2
+
+    img = cv2.imread(image_path)
+    h, w = img.shape[:2]
+    gc = np.zeros((h, w), np.uint8)
+    rect = (int(w * 0.25), int(h * 0.1), int(w * 0.5), int(h * 0.8))
+    bgd = np.zeros((1, 65), np.float64)
+    fgd = np.zeros((1, 65), np.float64)
+    cv2.grabCut(img, gc, rect, bgd, fgd, 5, cv2.GC_INIT_WITH_RECT)
+    fg = np.where((gc == 1) | (gc == 3), 255, 0).astype(np.uint8)
+    pw = width // 4
+    fg = cv2.resize(fg, (pw, height), interpolation=cv2.INTER_NEAREST)
+    full = np.zeros((height, width), np.uint8)
+    x0 = (width - pw) // 2
+    full[:, x0:x0 + pw] = fg
+    return cv2.dilate(full, np.ones((5, 5), np.uint8), iterations=2)
+
+
+def merge_splat(base_path: Path, bg_path: Path, mask: np.ndarray, out_path: Path) -> int:
+    base = PlyData.read(str(base_path))
+    bg = PlyData.read(str(bg_path))
+    bv = base["vertex"].data
+    gv = bg["vertex"].data
+    if len(gv) != mask.size or len(bv) != mask.size:
+        raise RuntimeError(f"splat vertex count mismatch: base={len(bv)} bg={len(gv)} mask={mask.size}")
+    merged = np.concatenate([bv, gv[mask.reshape(-1) > 0]], axis=0)
+    PlyData([PlyElement.describe(merged, "vertex")]).write(str(out_path))
+    return len(merged)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--image", required=True)
@@ -33,6 +66,7 @@ def main():
     ap.add_argument("--steps", type=int, default=20)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--gguf", default=str(MODELS / "flux-fill/flux-fill-official-q4.gguf"))
+    ap.add_argument("--inpaint-bg", action="store_true")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -104,6 +138,24 @@ def main():
         "--height", str(args.height),
         "--out", str(out / "scene"),
     ])
+
+    if args.inpaint_bg:
+        import cv2
+        fg = foreground_mask(args.image, args.width, args.height)
+        pano_bg = cv2.inpaint(np.asarray(pano)[:, :, ::-1], fg, 3, cv2.INPAINT_TELEA)[:, :, ::-1]
+        Image.fromarray(pano_bg).save(out / "pano_bg.png")
+        bg_depth = da2_depth(Image.fromarray(pano_bg), args.width, args.height)
+        bg_depth.astype("<f4").tofile(out / "depth_bg.f32")
+        run([str(WG), "splat", "--pano", str(out / "pano_bg.png"),
+             "--depth", str(out / "depth_bg.f32"),
+             "--width", str(args.width), "--height", str(args.height),
+             "--out", str(out / "scene_bg")])
+        shutil.copy2(out / "scene/gaussians.ply", out / "scene/gaussians_base.ply")
+        n = merge_splat(out / "scene/gaussians_base.ply",
+                        out / "scene_bg/gaussians.ply", fg,
+                        out / "scene/gaussians.ply")
+        print("inpaint_bg splats", n, flush=True)
+
     print("done", out)
 
 
