@@ -103,6 +103,25 @@ The voxel TSDF still shows a fold at the left depth discontinuity and a small
 pole tab, but it removes the needle-like shell stretching. `--mesh-shell`
 keeps the old Rust mesh (`mesh_shell.ply`).
 
+### 3DGS render / official comparison
+
+`render_splat_points.py --equirect` projects all 524,288 gaussians back to a
+1024x512 equirect image and reconstructs the panorama (colors/geometry intact).
+An inside-out 90-degree perspective point render also produces a coherent
+scene:
+
+```text
+ply: 524,288 gaussians
+inside 90 deg: 39,976 projected points
+```
+
+![3DGS comparison](assets/splat_compare.png)
+
+The existing `vulkan-splat` viewer still frames a full panorama badly (washed
+or tiny orbit view); this is a viewer camera issue, not a PLY/numeric issue.
+The 3DGS center/scale/quaternion formula is validated at ~1e-7 against the
+WorldGen Python reference.
+
 ### Fill foreground cleaning
 
 By default `worldgen_i2s_prep.py` writes `cond_clean.png`: GrabCut foreground

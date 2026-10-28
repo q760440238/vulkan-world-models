@@ -142,6 +142,21 @@ out/
 
 用任意 3DGS 查看器打开 `gaussians.ply`；mesh 可导入 Blender。
 
+## 3DGS 预览 / 官方对比
+
+```powershell
+py -3 worldgen\render_splat_points.py `
+  --ply output\rainforest\scene\gaussians.ply `
+  --out output\rainforest\splat_inside.png `
+  --inside --yaw 0 --fov 90 --radius 2
+```
+
+左：官方 demo 首帧；右：`worldgen-vulkan` 的 3DGS 在 90° 视角下的点渲染。
+
+![3DGS comparison](docs/assets/splat_compare.png)
+
+这是点渲染预览，不是带 covariance 的最终 3DGS 合成；颜色/几何已可对照官方 demo。
+
 ## DA-2 转换
 
 DA-2 原始模型是 PyTorch。仓库提供：
