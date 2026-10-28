@@ -142,6 +142,22 @@ out/
 
 用任意 3DGS 查看器打开 `gaussians.ply`；mesh 可导入 Blender。
 
+## GPU 3DGS
+
+`gpu-splat/` is a wgpu/Vulkan 3DGS renderer (no CPU rendering):
+
+```powershell
+scripts/build_gpu_splat.ps1
+tools\gpu-splat\gpu-splat.exe `
+  output\rainforest\scene\gaussians14.ply 0 `
+  output\rainforest\gpu_splat.png 0.2
+```
+
+`gaussians14.ply` is produced by `worldgen_make14.py --rgb` from the standard
+17-float PLY. The GPU renderer uses Vulkan and a 90-degree inside-out camera.
+
+![GPU 3DGS](docs/assets/splat_compare_gpu.png)
+
 ## 3DGS 预览 / 官方对比
 
 带 covariance 的透视 3DGS 合成（90° FOV，与官方 demo 视角接近）：

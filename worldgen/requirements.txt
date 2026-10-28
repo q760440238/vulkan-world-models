@@ -9,3 +9,4 @@ scikit-image>=0.22
 # Conversion only (not needed for inference):
 # torch>=2.7
 # safetensors>=0.4
+plyfile>=0.9

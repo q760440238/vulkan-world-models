@@ -16,6 +16,7 @@ MODELS = Path(os.environ.get("WORLDGEN_MODELS", ROOT / "models"))
 FLUX = MODELS / "flux-dev"
 SD = Path(os.environ.get("SD_CLI", ROOT / "tools/sd-cli.exe"))
 WG = Path(os.environ.get("WORLDGEN_VK", ROOT / "tools/worldgen-vk/worldgen-vk.exe"))
+GPU_SPLAT = Path(os.environ.get("GPU_SPLAT", ROOT / "tools/gpu-splat/gpu-splat.exe"))
 
 
 def run(cmd):
@@ -34,6 +35,7 @@ def main():
     ap.add_argument("--gguf", default=str(FLUX / "flux1-dev-q4_k.gguf"))
     ap.add_argument("--no-lora", action="store_true")
     ap.add_argument("--mesh-shell", action="store_true")
+    ap.add_argument("--cpu-mesh", action="store_true")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -62,8 +64,7 @@ def main():
         "--sampling-method", "euler",
         "--seed", str(args.seed),
         "--circularx",
-        "--vae-tiling",
-        "--vae-tile-size", "512x512",
+        *(["--vae-tiling", "--vae-tile-size", "512x512"] if args.width < 1600 else []),
         "--backend", "diffusion=vulkan0",
         "-o", str(out / "pano.png"),
     ])
@@ -73,26 +74,36 @@ def main():
     d.astype("<f4").tofile(out / "depth.f32")
     print("depth", d.shape, float(d.min()), float(d.max()), flush=True)
 
+    cpu_mesh = args.mesh_shell or args.cpu_mesh
     run([
-        str(WG), "both",
+        str(WG), "both" if cpu_mesh else "splat",
         "--pano", str(out / "pano.png"),
         "--depth", str(out / "depth.f32"),
         "--width", str(args.width),
         "--height", str(args.height),
         "--out", str(out / "scene"),
     ])
-    if not args.mesh_shell:
-        shutil.copy2(out / "scene/mesh.ply", out / "scene/mesh_shell.ply")
+    if cpu_mesh:
+        if not args.mesh_shell:
+            shutil.copy2(out / "scene/mesh.ply", out / "scene/mesh_shell.ply")
+            run([
+                sys.executable, str(ROOT / "worldgen/worldgen_mesh.py"),
+                "--pano", str(out / "pano.png"),
+                "--depth", str(out / "depth.f32"),
+                "--out", str(out / "scene/mesh.ply"),
+                "--width", str(args.width), "--height", str(args.height),
+                "--method", "voxel", "--voxel-res", "0.25", "--voxel-stride", "4",
+                "--median", "5", "--trim-poles", "0.02", "--voxel-smooth", "2.5",
+                "--largest-component",
+            ])
+    else:
+        ply14 = out / "scene/gaussians14.ply"
         run([
-            sys.executable, str(ROOT / "worldgen/worldgen_mesh.py"),
-            "--pano", str(out / "pano.png"),
-            "--depth", str(out / "depth.f32"),
-            "--out", str(out / "scene/mesh.ply"),
-            "--width", str(args.width), "--height", str(args.height),
-            "--method", "voxel", "--voxel-res", "0.25", "--voxel-stride", "4",
-            "--median", "5", "--trim-poles", "0.02", "--voxel-smooth", "2.5",
-            "--largest-component",
+            sys.executable, str(ROOT / "worldgen/worldgen_make14.py"),
+            "--ply", str(out / "scene/gaussians.ply"), "--out", str(ply14),
+            "--width", str(args.width), "--height", str(args.height), "--rgb",
         ])
+        run([str(GPU_SPLAT), str(ply14), "0", str(out / "splat.png"), "0.2"])
     print("done", out)
 
 

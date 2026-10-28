@@ -103,6 +103,20 @@ The voxel TSDF still shows a fold at the left depth discontinuity and a small
 pole tab, but it removes the needle-like shell stretching. `--mesh-shell`
 keeps the old Rust mesh (`mesh_shell.ply`).
 
+### GPU 3DGS renderer
+
+`gpu-splat/` is a wgpu/Vulkan splat renderer. The camera was fixed to
+inside-out and the projection now matches the CPU reference; increasing the
+splat radius 2x and raising opacity removes the earlier wash/blue-dome.
+
+```text
+gpu-splat.exe gaussians14.ply 0 out.png 0.2
+```
+
+It renders the official painting scene on the RX 6900 XT; it is not identical
+to the official demo camera (the GPU view is closer/lower), but it is a real
+Vulkan GPU 3DGS image.
+
 ### 3DGS render / official comparison
 
 `render_splat_points.py --equirect` projects all 524,288 gaussians back to a
