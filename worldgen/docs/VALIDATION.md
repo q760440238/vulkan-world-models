@@ -117,14 +117,16 @@ inside 90 deg: 39,976 projected points
 
 ![3DGS comparison](assets/splat_compare.png)
 
+`render_splat_gaussian.py` adds 3D covariance + alpha compositing for an
+equirect image. `render_splat_perspective.py` projects the same covariance
+through a 90-degree pinhole camera; at 832x480 it produces a scene close to the
+official demo viewpoint. `--scale-factor 0.7` is the current best balance
+between blur (1.0) and holes (0.3).
+
 The existing `vulkan-splat` viewer still frames a full panorama badly (washed
 or tiny orbit view); this is a viewer camera issue, not a PLY/numeric issue.
 The 3DGS center/scale/quaternion formula is validated at ~1e-7 against the
 WorldGen Python reference.
-
-`render_splat_gaussian.py` adds the 3D covariance and alpha compositing for an
-equirect image. It reconstructs the official painting pano with correct
-colors/geometry; high-latitude sky splats still show a few large blue blobs.
 
 ### Fill foreground cleaning
 

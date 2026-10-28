@@ -144,20 +144,20 @@ out/
 
 ## 3DGS 预览 / 官方对比
 
+带 covariance 的透视 3DGS 合成（90° FOV，与官方 demo 视角接近）：
+
 ```powershell
-py -3 worldgen\render_splat_points.py `
+py -3 worldgen\render_splat_perspective.py `
   --ply output\rainforest\scene\gaussians.ply `
-  --out output\rainforest\splat_inside.png `
-  --inside --yaw 0 --fov 90 --radius 2
+  --out output\rainforest\gauss_persp.png `
+  --width 832 --height 480 --fov 90 --yaw 0 --scale-factor 0.7
 ```
 
-左：官方 demo 首帧；右：`worldgen-vulkan` 的 3DGS 在 90° 视角下的点渲染。
+左：官方 demo 首帧；右：`worldgen-vulkan` 的 3DGS 透视合成。
 
 ![3DGS comparison](docs/assets/splat_compare.png)
 
-这是点渲染预览，不是带 covariance 的最终 3DGS 合成；颜色/几何已可对照官方 demo。
-
-带 covariance 的 equirect 3DGS 合成：
+equirect 全景 3DGS：
 
 ```powershell
 py -3 worldgen\render_splat_gaussian.py `
@@ -167,6 +167,15 @@ py -3 worldgen\render_splat_gaussian.py `
 ```
 
 ![3DGS equirect](docs/assets/gauss_equirect.png)
+
+点渲染仅用于快速检查：
+
+```powershell
+py -3 worldgen\render_splat_points.py `
+  --ply output\rainforest\scene\gaussians.ply `
+  --out output\rainforest\splat_inside.png `
+  --inside --yaw 0 --fov 90 --radius 2
+```
 
 ## DA-2 转换
 
