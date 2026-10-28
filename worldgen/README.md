@@ -119,6 +119,13 @@ py -3 worldgen\worldgen_i2s.py `
   --out output\rainforest --width 1024 --height 512 --steps 20
 # 可选：--inpaint-bg（GrabCut + OpenCV 背景 + splat merge）
 # 可选：--keep-fg（保留前景物体参与 Fill；默认会先清掉前景，减少重复对象）
+
+# 可选：Open3D 重建替代球壳 mesh
+py -3 worldgen\worldgen_mesh.py `
+  --pano output\rainforest\pano.png `
+  --depth output\rainforest\depth.f32 `
+  --out output\rainforest\scene\mesh_poisson.ply `
+  --width 1024 --height 512 --method poisson
 ```
 
 输出：

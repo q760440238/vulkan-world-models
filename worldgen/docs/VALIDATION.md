@@ -75,6 +75,20 @@ DA-2 native 1600x800 trace:
 full 50 steps: roughly 1 hour on this GPU
 ```
 
+### Open3D mesh reconstruction
+
+`worldgen/worldgen_mesh.py` can replace the Rust equirectangular shell mesh:
+
+```text
+Poisson: 524,288 points -> 537,145 verts / 1,067,522 tris, 6.8 s
+Ball pivoting: 502,378 points -> 985,990 tris
+Alpha shape: noisy surface with holes
+```
+
+Poisson on an open panorama shell still shows the input depth fold/crescent;
+it does not beat the Rust shell visually. The script is an optional path, not
+the pipeline default.
+
 ### Fill foreground cleaning
 
 By default `worldgen_i2s_prep.py` writes `cond_clean.png`: GrabCut foreground
