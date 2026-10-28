@@ -67,6 +67,7 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--gguf", default=str(MODELS / "flux-fill/flux-fill-official-q4.gguf"))
     ap.add_argument("--inpaint-bg", action="store_true")
+    ap.add_argument("--keep-fg", action="store_true")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -90,7 +91,7 @@ def main():
         "--vae", str(FLUX / "ae.safetensors"),
         "--clip_l", str(FLUX / "clip_l.safetensors"),
         "--t5xxl", str(FLUX / "t5xxl_fp8_e4m3fn.safetensors"),
-        "-i", str(prep / "cond.png"),
+        "-i", str(prep / ("cond.png" if args.keep_fg or not (prep / "cond_clean.png").exists() else "cond_clean.png")),
         "--mask", str(prep / "mask.png"),
         "-p", prompt,
         "-n", "blurry, low quality",

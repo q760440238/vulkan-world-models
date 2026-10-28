@@ -118,6 +118,7 @@ py -3 worldgen\worldgen_i2s.py `
   --prompt "a lush rainforest with gorillas" `
   --out output\rainforest --width 1024 --height 512 --steps 20
 # 可选：--inpaint-bg（GrabCut + OpenCV 背景 + splat merge）
+# 可选：--keep-fg（保留前景物体参与 Fill；默认会先清掉前景，减少重复对象）
 ```
 
 输出：
@@ -157,8 +158,8 @@ demo uses the full PyTorch pipeline and a different prompt/seed.
 
 ## 限制
 
-- Fill 会重复物体，竖带边界可见，mesh 有拉伸
-- 默认只验证 1024x512；1600x800 需重新 trace DA-2 或接受 resample
+- 默认先清前景再 Fill，重复物体大幅减少；仍可能有残留、竖带边界和 mesh 拉伸
+- 1600x800 已支持原生 DA-2 trace，但只验证了 10 steps
 - `use_sharp=True` 未接（需要 SHARP 模型和单独移植）
 - `inpaint_bg` 是简化实现：GrabCut 前景 + OpenCV Telea 背景 + DA-2 + splat merge，
   不是官方 OneFormer + FLUX Fill 版本

@@ -75,6 +75,16 @@ DA-2 native 1600x800 trace:
 full 50 steps: roughly 1 hour on this GPU
 ```
 
+### Fill foreground cleaning
+
+By default `worldgen_i2s_prep.py` writes `cond_clean.png`: GrabCut foreground
+is removed from the Fill condition with OpenCV inpaint, while the original
+band (`cond.png`) is composited back after Fill. This stops Fill from repeating
+the foreground object on both sides. Use `--keep-fg` to disable.
+
+The official painting demo now produces a clean panorama with the house once
+(no duplicated foreground) and no visible band edge.
+
 ### inpaint_bg (simplified)
 
 `worldgen_i2s.py --inpaint-bg`:
