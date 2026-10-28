@@ -20,11 +20,12 @@ Hugging Face 模型页：
 
 本仓库包含四条工作线：
 
-1. **LingBot-World 1.3B causal-fast 推理移植**
+1. **LingBot-World 1.3B Vulkan kernel port（部分完成）**
    - Rust + wgpu/Vulkan
-   - 30 层 DiT、UMT5-XXL 文本编码、Wan2.1 VAE
-   - 4-step FlowUniPC 采样
-   - 单帧 1560 token 路径已跑通
+   - 30 层 DiT、UMT5-XXL、Wan2.1 VAE 的逐算子/小尺度 block 验证
+   - ✅ RMSNorm/GEMM/RoPE/attention/KV cache/conv3d/VAE 组件
+   - ❌ 完整 1.3B DiT 前向、完整 VAE、T5 Vulkan、4-step 视频生成
+   - 详见 [lingbot/README.md](lingbot/README.md)
 
 2. **3D Gaussian Splatting Vulkan 渲染器**
    - Rust + wgpu
@@ -49,15 +50,16 @@ Hugging Face 模型页：
 
 ## 结果
 
-### LingBot 单帧推理
+### LingBot Vulkan kernel 验证（未完成完整推理）
 
 | 项目 | 结果 |
 | --- | --- |
 | 模型 | LingBot-World 2.0 1.3B causal-fast |
+| 状态 | **PARTIAL / BLOCKED** |
+| 已验证 | kernels、单 block、小尺度 VAE、30 层链式运行 |
+| 未完成 | 完整 1.3B DiT、完整 VAE、T5 Vulkan、4-step 视频 |
 | 层数 | 30 |
 | dim / FFN | 1536 / 8960 |
-| 采样 | FlowUniPC, 4 steps |
-| VAE | Wan2.1 VAE, z16 |
 | 文本编码 | UMT5-XXL, CPU |
 | 后端 | Rust + wgpu / Vulkan |
 | 硬件 | AMD RX 6900 XT 16GB |
@@ -177,7 +179,7 @@ cd lingbot/wgpu/wgpu-dit-block
 cargo build --release
 ```
 
-LingBot 完整推理需要真实权重和 CPU driver 脚本，权重不包含在本仓库。
+LingBot 目前只验证到 kernel/小尺度 block；完整推理还需要权重、CPU driver 和显存流式，权重不包含在本仓库。
 
 ## 权重
 
@@ -217,7 +219,7 @@ HunyuanWorld 权重受 **Tencent HunyuanWorld-Mirror Community License** 约束�
 ## 已知限制
 
 - LingBot 是视频世界模型，不直接输出 mesh/depth。
-- 单帧 4-step 已跑通；多帧 chunk 仍会退化。
+- LingBot 当前只完成 kernel/小尺度 block 验证；完整 1.3B 推理未跑通。
 - 3DGS 单图 orbit 到较大角度会露洞，这是单视角数据限制。
 - 3DGS PLY 只有 DC 颜色，没有高阶 SH。
 - VkSplat 只在小型合成多视角数据上验证，不是 Mip-NeRF 360 基准成绩。
@@ -242,10 +244,12 @@ Hugging Face model pages:
 
 It contains:
 
-1. **LingBot-World 1.3B causal-fast inference** ported to Rust + wgpu/Vulkan
-   - 30-layer DiT, UMT5-XXL text encoder, Wan2.1 VAE
-   - 4-step FlowUniPC
-   - Single-frame 1560-token path working
+1. **LingBot-World 1.3B Vulkan kernel port (partial)**
+   - Rust + wgpu/Vulkan
+   - per-kernel and small-block validation for the 30-layer DiT, UMT5-XXL, Wan2.1 VAE
+   - ✅ RMSNorm/GEMM/RoPE/attention/KV cache/conv3d/VAE components
+   - ❌ full 1.3B DiT forward, full VAE, T5 on Vulkan, 4-step video
+   - see [lingbot/README.md](lingbot/README.md)
 
 2. **3D Gaussian Splatting renderer**
    - Rust + wgpu
@@ -270,15 +274,16 @@ It contains:
 
 ## Results
 
-### LingBot single-frame inference
+### LingBot Vulkan kernel validation (full inference not complete)
 
 | Item | Result |
 | --- | --- |
 | Model | LingBot-World 2.0 1.3B causal-fast |
+| Status | **PARTIAL / BLOCKED** |
+| Validated | kernels, single blocks, small-scale VAE, 30-layer chain |
+| Not done | full 1.3B DiT, full VAE, T5 on Vulkan, 4-step video |
 | Layers | 30 |
 | Dim / FFN | 1536 / 8960 |
-| Sampler | FlowUniPC, 4 steps |
-| VAE | Wan2.1 VAE, z16 |
 | Text encoder | UMT5-XXL, CPU |
 | Backend | Rust + wgpu / Vulkan |
 | Hardware | AMD RX 6900 XT 16GB |
@@ -393,7 +398,7 @@ Third-party components remain under their own licenses; the original
 ## Known limitations
 
 - LingBot is a video world model, not a native mesh/depth generator.
-- Single-frame 4-step inference works; multi-frame chunks still degrade.
+- LingBot currently has kernel/small-block validation only; full 1.3B inference is not complete.
 - Single-image 3DGS shows holes at large orbit angles.
 - The 3DGS PLY has DC color only, no higher-order SH.
 - VkSplat was validated on a small synthetic multi-view set, not Mip-NeRF 360.
