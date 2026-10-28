@@ -74,11 +74,24 @@ def main():
         "-o", str(out / "pano_fill.png"),
     ])
 
-    g = np.asarray(Image.open(out / "pano_fill.png").convert("RGB")).astype(np.float32)
-    c = np.asarray(Image.open(prep / "cond.png").convert("RGB")).astype(np.float32)
-    m = Image.open(prep / "mask.png").convert("L").filter(ImageFilter.GaussianBlur(8))
-    valid = (1.0 - np.asarray(m).astype(np.float32) / 255.0)[..., None]
-    pano = (g * (1.0 - valid) + c * valid).clip(0, 255).astype(np.uint8)
+    g_img = Image.open(out / "pano_fill.png").convert("RGB")
+    c_img = Image.open(prep / "cond.png").convert("RGB")
+    mask_img = Image.open(prep / "mask.png").convert("L")
+    try:
+        import cv2
+        g_bgr = cv2.cvtColor(np.asarray(g_img), cv2.COLOR_RGB2BGR)
+        c_bgr = cv2.cvtColor(np.asarray(c_img), cv2.COLOR_RGB2BGR)
+        valid_mask = 255 - np.asarray(mask_img)
+        ys, xs = np.where(valid_mask > 128)
+        center = (int((xs.min() + xs.max()) / 2), int((ys.min() + ys.max()) / 2))
+        pano = cv2.seamlessClone(c_bgr, g_bgr, valid_mask, center, cv2.NORMAL_CLONE)
+        pano = cv2.cvtColor(pano, cv2.COLOR_BGR2RGB)
+    except Exception:
+        g = np.asarray(g_img).astype(np.float32)
+        c = np.asarray(c_img).astype(np.float32)
+        m = mask_img.filter(ImageFilter.GaussianBlur(24))
+        valid = (1.0 - np.asarray(m).astype(np.float32) / 255.0)[..., None]
+        pano = (g * (1.0 - valid) + c * valid).clip(0, 255).astype(np.uint8)
     Image.fromarray(pano).save(out / "pano.png")
 
     d = da2_depth(Image.fromarray(pano), args.width, args.height)

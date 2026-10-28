@@ -52,6 +52,22 @@ output: output/i2s-ncnn-clean/
   1,046,528 triangles
 ```
 
+### i2s seam blending
+
+The Fill output and the original input band are composited with
+`cv2.seamlessClone` (NORMAL_CLONE). Without OpenCV, a 24 px feathered alpha
+blend is used. This removes the visible vertical band boundary; it does not
+remove Fill object repetition.
+
+### 1600x800
+
+```text
+t2s, 1600x800, 10 steps: 739 s
+output: 1,280,000 splats, 1600x800 pano
+DA-2: input resampled to the fixed 1024x512 ncnn graph, depth upsampled
+full 50 steps: roughly 1 hour on this GPU
+```
+
 ### DA-2 numeric and performance
 
 ncnn Vulkan vs PyTorch, 1024x512:

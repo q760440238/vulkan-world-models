@@ -192,8 +192,37 @@ fn write_gaussians(path: &Path, s: &Splat) -> Result<()> {
     Ok(())
 }
 
+fn median3(depth: &[f32], w: usize, h: usize) -> Vec<f32> {
+    let mut out = vec![0.0f32; w * h];
+    for y in 0..h {
+        for x in 0..w {
+            let mut v = [0.0f32; 9];
+            let mut n = 0;
+            for dy in -1i32..=1 {
+                for dx in -1i32..=1 {
+                    let yy = (y as i32 + dy).clamp(0, h as i32 - 1) as usize;
+                    let xx = (x as i32 + dx).rem_euclid(w as i32) as usize;
+                    let d = depth[yy * w + xx];
+                    if d.is_finite() && d > 0.0 {
+                        v[n] = d;
+                        n += 1;
+                    }
+                }
+            }
+            if n == 0 {
+                out[y * w + x] = depth[y * w + x];
+            } else {
+                v[..n].sort_by(|a, b| a.partial_cmp(b).unwrap());
+                out[y * w + x] = v[n / 2];
+            }
+        }
+    }
+    out
+}
+
 fn write_mesh(path: &Path, rgb: &[u8], depth: &[f32], w: usize, h: usize) -> Result<usize> {
     let rs = rays(w, h);
+    let depth = median3(depth, w, h);
     let mut index = vec![-1i64; w * h];
     let mut verts: Vec<([f32; 3], [u8; 3])> = Vec::new();
     for i in 0..w * h {
@@ -209,16 +238,27 @@ fn write_mesh(path: &Path, rgb: &[u8], depth: &[f32], w: usize, h: usize) -> Res
     for y in 0..h - 1 {
         for x in 0..w {
             let x1 = (x + 1) % w;
-            let a = index[y * w + x];
-            let b = index[y * w + x1];
-            let c = index[(y + 1) * w + x];
-            let d = index[(y + 1) * w + x1];
-            if a >= 0 && b >= 0 && c >= 0 {
-                tris.push([a as i32, c as i32, b as i32]);
+            let ia = y * w + x;
+            let ib = y * w + x1;
+            let ic = (y + 1) * w + x;
+            let id = (y + 1) * w + x1;
+            let a = index[ia];
+            let b = index[ib];
+            let c = index[ic];
+            let d = index[id];
+            if a < 0 || b < 0 || c < 0 || d < 0 {
+                continue;
             }
-            if b >= 0 && c >= 0 && d >= 0 {
-                tris.push([b as i32, c as i32, d as i32]);
+            let ds = [depth[ia], depth[ib], depth[ic], depth[id]];
+            let dmin = ds.iter().cloned().fold(f32::INFINITY, f32::min);
+            let dmax = ds.iter().cloned().fold(0.0f32, f32::max);
+            // Do not bridge a foreground/background depth discontinuity with a
+            // long, stretched quad; leave a hole at the silhouette instead.
+            if dmin > 0.0 && dmax / dmin > 1.8 {
+                continue;
             }
+            tris.push([a as i32, c as i32, b as i32]);
+            tris.push([b as i32, c as i32, d as i32]);
         }
     }
     let mut f = BufWriter::new(File::create(path)?);

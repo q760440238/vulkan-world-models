@@ -1,5 +1,7 @@
 numpy>=1.26
 Pillow>=10.0
+# Optional: seamless input/background blend (otherwise feathered fallback)
+opencv-python>=4.9
 # Conversion only (not needed for inference):
 # torch>=2.7
 # safetensors>=0.4

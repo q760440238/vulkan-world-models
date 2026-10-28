@@ -142,6 +142,16 @@ DA-2 原始模型是 PyTorch。仓库提供：
 关键点：runner 必须用 `-DNCNN_VULKAN` 编译，并调用
 `net.set_vulkan_device(0)`，否则 ncnn 会回退 CPU。
 
+## Official reference
+
+Same input as the official demo (`assets/img2scene/painting.png`), left is the
+official demo's first frame, right is this pipeline's i2s panorama:
+
+![official comparison](docs/assets/official_compare.png)
+
+This is a qualitative comparison, not a numeric reproduction: the official
+demo uses the full PyTorch pipeline and a different prompt/seed.
+
 ## 限制
 
 - Fill 会重复物体，竖带边界可见，mesh 有拉伸

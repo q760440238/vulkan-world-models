@@ -10,6 +10,7 @@ tools/*
 *.f32
 *.ply
 *.png
+!docs/assets/*.png
 *.jpg
 *.exe
 *.dll
