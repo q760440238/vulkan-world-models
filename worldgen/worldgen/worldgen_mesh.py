@@ -188,6 +188,7 @@ def main():
     ap.add_argument("--voxel-stride", type=int, default=1)
     ap.add_argument("--voxel-smooth", type=float, default=1.0)
     ap.add_argument("--fill-holes", action="store_true")
+    ap.add_argument("--outlier-std", type=float, default=0.0)
     ap.add_argument("--face-size", type=int, default=512)
     ap.add_argument("--voxel-size", type=float, default=0.1)
     ap.add_argument("--sdf-trunc", type=float, default=0.2)
@@ -195,6 +196,7 @@ def main():
     ap.add_argument("--normal-outward", action="store_true")
     ap.add_argument("--median", type=int, default=0)
     ap.add_argument("--trim-poles", type=float, default=0.0)
+    ap.add_argument("--depth-consistency", type=float, default=0.0)
     args = ap.parse_args()
 
     t0 = time.time()
@@ -208,6 +210,11 @@ def main():
     pts = (rs * depth[..., None]).reshape(-1, 3)
     colors = rgb.reshape(-1, 3)
     valid = np.isfinite(pts).all(axis=1) & (depth.reshape(-1) > 1e-4)
+    if args.depth_consistency > 0:
+        from scipy.ndimage import median_filter
+        med = median_filter(depth, size=11, mode="nearest")
+        resid = np.abs(depth - med) / np.maximum(depth, 1e-3)
+        valid &= (resid < args.depth_consistency).reshape(-1)
     if args.trim_poles > 0:
         k = max(1, int(h * args.trim_poles))
         v2 = valid.reshape(h, w)
@@ -246,6 +253,10 @@ def main():
             o3d.geometry.KDTreeSearchParamHybrid(radius=0.2, max_nn=30)
         )
         pcd.orient_normals_towards_camera_location(np.zeros(3, dtype=np.float64))
+    if args.outlier_std > 0:
+        pcd, _ = pcd.remove_statistical_outlier(
+            nb_neighbors=20, std_ratio=args.outlier_std
+        )
     pts = np.asarray(pcd.points)
     colors = np.asarray(pcd.colors)
 
