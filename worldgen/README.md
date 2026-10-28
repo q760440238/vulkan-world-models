@@ -120,12 +120,12 @@ py -3 worldgen\worldgen_i2s.py `
 # 可选：--inpaint-bg（GrabCut + OpenCV 背景 + splat merge）
 # 可选：--keep-fg（保留前景物体参与 Fill；默认会先清掉前景，减少重复对象）
 
-# 可选：Open3D 重建替代球壳 mesh
+# 可选：Open3D/TSDF 重建；默认就是 TSDF，--mesh-shell 回到球壳
 py -3 worldgen\worldgen_mesh.py `
   --pano output\rainforest\pano.png `
   --depth output\rainforest\depth.f32 `
-  --out output\rainforest\scene\mesh_poisson.ply `
-  --width 1024 --height 512 --method poisson
+  --out output\rainforest\scene\mesh.ply `
+  --width 1024 --height 512 --method voxel --voxel-res 0.25 --voxel-stride 4 --largest-component
 ```
 
 输出：
@@ -165,7 +165,8 @@ demo uses the full PyTorch pipeline and a different prompt/seed.
 
 ## 限制
 
-- 默认先清前景再 Fill，重复物体大幅减少；仍可能有残留、竖带边界和 mesh 拉伸
+- 默认先清前景再 Fill，重复物体大幅减少；仍可能有残留和竖带边界
+- 默认 mesh 改为 TSDF；仍有左侧深度折叠和小 pole tab，`--mesh-shell` 可回退球壳
 - 1600x800 已支持原生 DA-2 trace，但只验证了 10 steps
 - `use_sharp=True` 未接（需要 SHARP 模型和单独移植）
 - `inpaint_bg` 是简化实现：GrabCut 前景 + OpenCV Telea 背景 + DA-2 + splat merge，

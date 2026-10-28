@@ -2,7 +2,9 @@
 
 import argparse
 import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from PIL import Image
@@ -31,6 +33,7 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--gguf", default=str(FLUX / "flux1-dev-q4_k.gguf"))
     ap.add_argument("--no-lora", action="store_true")
+    ap.add_argument("--mesh-shell", action="store_true")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -78,6 +81,17 @@ def main():
         "--height", str(args.height),
         "--out", str(out / "scene"),
     ])
+    if not args.mesh_shell:
+        shutil.copy2(out / "scene/mesh.ply", out / "scene/mesh_shell.ply")
+        run([
+            sys.executable, str(ROOT / "worldgen/worldgen_mesh.py"),
+            "--pano", str(out / "pano.png"),
+            "--depth", str(out / "depth.f32"),
+            "--out", str(out / "scene/mesh.ply"),
+            "--width", str(args.width), "--height", str(args.height),
+            "--method", "voxel", "--voxel-res", "0.25", "--voxel-stride", "4",
+            "--largest-component",
+        ])
     print("done", out)
 
 

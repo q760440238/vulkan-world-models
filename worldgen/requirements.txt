@@ -5,6 +5,7 @@ opencv-python>=4.9
 # Optional Open3D mesh reconstruction
 open3d>=0.18
 scipy>=1.11
+scikit-image>=0.22
 # Conversion only (not needed for inference):
 # torch>=2.7
 # safetensors>=0.4

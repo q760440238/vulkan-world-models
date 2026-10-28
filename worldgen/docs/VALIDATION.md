@@ -75,19 +75,29 @@ DA-2 native 1600x800 trace:
 full 50 steps: roughly 1 hour on this GPU
 ```
 
-### Open3D mesh reconstruction
+### Open3D / TSDF mesh
 
-`worldgen/worldgen_mesh.py` can replace the Rust equirectangular shell mesh:
+Default mesh is now a **voxel signed-distance field + marching cubes**
+(`worldgen_mesh.py --method voxel`):
 
 ```text
-Poisson: 524,288 points -> 537,145 verts / 1,067,522 tris, 6.8 s
-Ball pivoting: 502,378 points -> 985,990 tris
-Alpha shape: noisy surface with holes
+voxel-res 0.25, voxel-stride 4
+52k verts / 104k tris
+~3.3 s at 1024x512
+i2s end-to-end 20 steps: 69.8 s (vs 61.5 s shell)
 ```
 
-Poisson on an open panorama shell still shows the input depth fold/crescent;
-it does not beat the Rust shell visually. The script is an optional path, not
-the pipeline default.
+Poisson/Ball/Alpha are available but were not better:
+
+```text
+Poisson: 537,145 verts / 1,067,522 tris, 6.8 s, crescent fold + ripples
+Ball:    985,990 tris, shell-equivalent
+Alpha:   noisy surface with holes
+```
+
+The voxel TSDF still shows a fold at the left depth discontinuity and a small
+pole tab, but it removes the needle-like shell stretching. `--mesh-shell`
+keeps the old Rust mesh (`mesh_shell.ply`).
 
 ### Fill foreground cleaning
 

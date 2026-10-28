@@ -22,6 +22,105 @@ def rays(w: int, h: int) -> np.ndarray:
     return np.stack([x, y, z], axis=-1).astype(np.float32)
 
 
+def tsdf_mesh(rgb: np.ndarray, depth: np.ndarray, face: int, voxel: float, trunc: float):
+    """Integrate six 90-degree cube faces into a TSDF and extract a mesh."""
+    from scipy.ndimage import map_coordinates
+
+    h, w = depth.shape
+    n = face
+    u = (np.arange(n, dtype=np.float32) + 0.5) / n * 2.0 - 1.0
+    uu, vv = np.meshgrid(u, u)
+    faces = [
+        ((0, 0, 1), (1, 0, 0), (0, 1, 0)),
+        ((0, 0, -1), (-1, 0, 0), (0, 1, 0)),
+        ((1, 0, 0), (0, 0, -1), (0, 1, 0)),
+        ((-1, 0, 0), (0, 0, 1), (0, 1, 0)),
+        ((0, 1, 0), (1, 0, 0), (0, 0, -1)),
+        ((0, -1, 0), (1, 0, 0), (0, 0, 1)),
+    ]
+    vol = o3d.pipelines.integration.ScalableTSDFVolume(
+        voxel_length=voxel,
+        sdf_trunc=trunc,
+        color_type=o3d.pipelines.integration.TSDFVolumeColorType.RGB8,
+    )
+    intr = o3d.camera.PinholeCameraIntrinsic(n, n, n / 2, n / 2, n / 2, n / 2)
+    for f, r, d in faces:
+        f = np.asarray(f, np.float32)
+        r = np.asarray(r, np.float32)
+        up = np.asarray(d, np.float32)
+        dirs = f[None, None, :] + uu[..., None] * r - vv[..., None] * up
+        dirs /= np.linalg.norm(dirs, axis=-1, keepdims=True)
+        lon = np.arctan2(dirs[..., 0], dirs[..., 2])
+        lat = np.arcsin(np.clip(dirs[..., 1], -1, 1))
+        x = (lon + np.pi) / (2 * np.pi) * w - 0.5
+        y = (lat + np.pi / 2) / np.pi * h - 0.5
+        x = np.mod(x, w)
+        coords = np.stack([y, x], axis=0)
+        face_rgb = np.stack(
+            [map_coordinates(rgb[..., c], coords, order=1, mode="nearest") for c in range(3)],
+            axis=-1,
+        ).clip(0, 1)
+        rad = map_coordinates(depth, coords, order=1, mode="nearest")
+        z = rad * np.maximum(dirs @ f, 1e-4)
+        z[~np.isfinite(z)] = 0
+        z[z < 0.1] = 0
+        print("face", f, "z", float(z.min()), float(z.max()), float(z.mean()), flush=True)
+        rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
+            o3d.geometry.Image((face_rgb * 255).astype(np.uint8)),
+            o3d.geometry.Image((z * 1000.0).astype(np.float32)),
+            depth_scale=1000.0,
+            depth_trunc=50.0,
+            convert_rgb_to_intensity=False,
+        )
+        ext = np.array(
+            [[*r, 0.0], [*up, 0.0], [*f, 0.0], [0.0, 0.0, 0.0, 1.0]],
+            np.float64,
+        )
+        vol.integrate(rgbd, intr, ext)
+    print("voxels", len(vol.extract_voxel_point_cloud().points), flush=True)
+    mesh = vol.extract_triangle_mesh()
+    mesh.compute_vertex_normals()
+    return mesh
+
+
+def voxel_tsdf(points: np.ndarray, normals: np.ndarray, colors: np.ndarray,
+               res: float, trunc: float, smooth: int = 1):
+    """Signed-distance voxel field + marching cubes (a simple TSDF)."""
+    from scipy.ndimage import gaussian_filter
+    from skimage.measure import marching_cubes
+
+    lo = points.min(axis=0) - res * 2
+    hi = points.max(axis=0) + res * 2
+    dims = np.maximum(np.ceil((hi - lo) / res).astype(int), 4)
+    xs = lo[0] + np.arange(dims[0]) * res
+    ys = lo[1] + np.arange(dims[1]) * res
+    zs = lo[2] + np.arange(dims[2]) * res
+    X, Y, Z = np.meshgrid(xs, ys, zs, indexing="ij")
+    centers = np.stack([X.ravel(), Y.ravel(), Z.ravel()], axis=1)
+
+    tree = cKDTree(points)
+    dist, idx = tree.query(centers, k=1, workers=-1)
+    nearest = points[idx]
+    nrm = normals[idx]
+    side = np.einsum("ij,ij->i", centers - nearest, nrm)
+    field = np.sign(side) * np.minimum(dist / trunc, 1.0)
+    field = field.reshape(dims).astype(np.float32)
+    if smooth > 0:
+        field = gaussian_filter(field, smooth).astype(np.float32)
+
+    verts, faces, _, _ = marching_cubes(field, level=0.0, spacing=(res, res, res))
+    verts = verts + lo
+    mesh = o3d.geometry.TriangleMesh(
+        o3d.utility.Vector3dVector(verts),
+        o3d.utility.Vector3iVector(faces.astype(np.int32)),
+    )
+    _, cidx = tree.query(verts, k=1, workers=-1)
+    mesh.vertex_colors = o3d.utility.Vector3dVector(colors[cidx])
+    mesh.compute_vertex_normals()
+    print(f"voxel grid {dims.tolist()}, {len(verts)} verts / {len(faces)} tris", flush=True)
+    return mesh
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pano", required=True)
@@ -33,16 +132,26 @@ def main():
     ap.add_argument("--density-trim", type=float, default=0.05)
     ap.add_argument("--estimate-normals", action="store_true")
     ap.add_argument("--voxel", type=float, default=0.0)
-    ap.add_argument("--method", choices=["poisson", "alpha", "ball"], default="poisson")
+    ap.add_argument("--method", choices=["poisson", "alpha", "ball", "tsdf", "voxel"], default="poisson")
     ap.add_argument("--alpha", type=float, default=0.2)
+    ap.add_argument("--voxel-res", type=float, default=0.2)
+    ap.add_argument("--voxel-trunc", type=float, default=0.4)
+    ap.add_argument("--voxel-stride", type=int, default=1)
+    ap.add_argument("--face-size", type=int, default=512)
+    ap.add_argument("--voxel-size", type=float, default=0.1)
+    ap.add_argument("--sdf-trunc", type=float, default=0.2)
     ap.add_argument("--largest-component", action="store_true")
     ap.add_argument("--normal-outward", action="store_true")
+    ap.add_argument("--median", type=int, default=0)
     args = ap.parse_args()
 
     t0 = time.time()
     w, h = args.width, args.height
     rgb = np.asarray(Image.open(args.pano).convert("RGB").resize((w, h))).astype(np.float32) / 255.0
     depth = np.fromfile(args.depth, "<f4").reshape(h, w).astype(np.float32)
+    if args.median > 1:
+        from scipy.ndimage import median_filter
+        depth = median_filter(depth, size=args.median, mode="nearest")
     rs = rays(w, h)
     pts = (rs * depth[..., None]).reshape(-1, 3)
     colors = rgb.reshape(-1, 3)
@@ -82,7 +191,14 @@ def main():
     pts = np.asarray(pcd.points)
     colors = np.asarray(pcd.colors)
 
-    if args.method == "alpha":
+    if args.method == "voxel":
+        s = max(1, args.voxel_stride)
+        mesh = voxel_tsdf(pts[::s], n[::s], colors[::s], args.voxel_res, args.voxel_trunc)
+        dens = np.zeros(0)
+    elif args.method == "tsdf":
+        mesh = tsdf_mesh(rgb, depth, args.face_size, args.voxel_size, args.sdf_trunc)
+        dens = np.zeros(0)
+    elif args.method == "alpha":
         mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
             pcd, args.alpha
         )
@@ -117,7 +233,7 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     o3d.io.write_triangle_mesh(str(out), mesh, write_ascii=False, compressed=False)
     print(
-        f"poisson: {len(pts)} points -> {len(mesh.vertices)} verts / "
+        f"{args.method}: {len(pts)} points -> {len(mesh.vertices)} verts / "
         f"{len(mesh.triangles)} tris, {time.time() - t0:.1f}s -> {out}",
         flush=True,
     )

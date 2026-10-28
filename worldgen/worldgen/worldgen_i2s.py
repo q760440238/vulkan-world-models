@@ -68,6 +68,7 @@ def main():
     ap.add_argument("--gguf", default=str(MODELS / "flux-fill/flux-fill-official-q4.gguf"))
     ap.add_argument("--inpaint-bg", action="store_true")
     ap.add_argument("--keep-fg", action="store_true")
+    ap.add_argument("--mesh-shell", action="store_true")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -139,6 +140,18 @@ def main():
         "--height", str(args.height),
         "--out", str(out / "scene"),
     ])
+
+    if not args.mesh_shell:
+        shutil.copy2(out / "scene/mesh.ply", out / "scene/mesh_shell.ply")
+        run([
+            sys.executable, str(ROOT / "worldgen/worldgen_mesh.py"),
+            "--pano", str(out / "pano.png"),
+            "--depth", str(out / "depth.f32"),
+            "--out", str(out / "scene/mesh.ply"),
+            "--width", str(args.width), "--height", str(args.height),
+            "--method", "voxel", "--voxel-res", "0.25", "--voxel-stride", "4",
+            "--largest-component",
+        ])
 
     if args.inpaint_bg:
         import cv2
