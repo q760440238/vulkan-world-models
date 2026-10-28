@@ -106,7 +106,7 @@ def main():
         "--sampling-method", "euler",
         "--strength", "1.0",
         "--seed", str(args.seed),
-        *(["--vae-tiling", "--vae-tile-size", "512x512"] if args.width < 1600 else []),
+        *["--vae-tiling", "--vae-tile-size", ("512x512")],
         "--backend", "diffusion=vulkan0",
         "-o", str(out / "pano_fill.png"),
     ])
@@ -194,4 +194,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 

@@ -219,8 +219,9 @@ demo uses the full PyTorch pipeline and a different prompt/seed.
 ## 限制
 
 - 默认先清前景再 Fill，重复物体大幅减少；仍可能有残留和竖带边界
-- 默认 mesh 改为 TSDF；仍有左侧深度折叠和小 pole tab，`--mesh-shell` 可回退球壳
-- 1600x800 已支持原生 DA-2 trace，但只验证了 10 steps
+- 默认不再生成 CPU TSDF；`--cpu-mesh` 才生成，仍有左侧深度折叠和小 pole tab
+- 1600x800 已支持原生 DA-2 trace，但 sd.cpp 的 1600 VAE 仍有 tile 网格/中心条问题，
+  推荐继续用 1024×512/20 作为质量路径
 - `use_sharp=True` 未接（需要 SHARP 模型和单独移植）
 - `inpaint_bg` 是简化实现：GrabCut 前景 + OpenCV Telea 背景 + DA-2 + splat merge，
   不是官方 OneFormer + FLUX Fill 版本
