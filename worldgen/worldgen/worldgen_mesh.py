@@ -121,6 +121,55 @@ def voxel_tsdf(points: np.ndarray, normals: np.ndarray, colors: np.ndarray,
     return mesh
 
 
+def fill_holes(mesh: o3d.geometry.TriangleMesh) -> o3d.geometry.TriangleMesh:
+    """Fan-fill boundary loops with a centroid vertex."""
+    from collections import defaultdict
+
+    v = np.asarray(mesh.vertices)
+    t = np.asarray(mesh.triangles)
+    directed = defaultdict(int)
+    undirected = defaultdict(int)
+    for tri in t:
+        for a, b in ((tri[0], tri[1]), (tri[1], tri[2]), (tri[2], tri[0])):
+            directed[(int(a), int(b))] += 1
+            undirected[(min(int(a), int(b)), max(int(a), int(b)))] += 1
+    nxt = {}
+    for (a, b), c in directed.items():
+        if undirected[(min(a, b), max(a, b))] == 1:
+            nxt[a] = b
+    seen = set()
+    new_v = list(v)
+    new_t = list(t)
+    new_c = list(np.asarray(mesh.vertex_colors)) if mesh.has_vertex_colors() else []
+    for start in list(nxt.keys()):
+        if start in seen:
+            continue
+        loop = []
+        cur = start
+        while cur not in seen and cur in nxt:
+            seen.add(cur)
+            loop.append(cur)
+            cur = nxt[cur]
+        if len(loop) < 3:
+            continue
+        center = v[loop].mean(axis=0)
+        ci = len(new_v)
+        new_v.append(center)
+        if new_c:
+            new_c.append(np.asarray(new_c)[loop].mean(axis=0))
+        for i in range(len(loop)):
+            a, b = loop[i], loop[(i + 1) % len(loop)]
+            new_t.append([a, b, ci])
+    out = o3d.geometry.TriangleMesh(
+        o3d.utility.Vector3dVector(np.asarray(new_v)),
+        o3d.utility.Vector3iVector(np.asarray(new_t, np.int32)),
+    )
+    if new_c:
+        out.vertex_colors = o3d.utility.Vector3dVector(np.asarray(new_c))
+    out.compute_vertex_normals()
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pano", required=True)
@@ -138,6 +187,7 @@ def main():
     ap.add_argument("--voxel-trunc", type=float, default=0.4)
     ap.add_argument("--voxel-stride", type=int, default=1)
     ap.add_argument("--voxel-smooth", type=float, default=1.0)
+    ap.add_argument("--fill-holes", action="store_true")
     ap.add_argument("--face-size", type=int, default=512)
     ap.add_argument("--voxel-size", type=float, default=0.1)
     ap.add_argument("--sdf-trunc", type=float, default=0.2)
@@ -230,6 +280,8 @@ def main():
         keep = int(np.argmax(np.asarray(counts)))
         mesh.remove_triangles_by_mask(clusters != keep)
         mesh.remove_unreferenced_vertices()
+    if args.fill_holes:
+        mesh = fill_holes(mesh)
 
     # Transfer colors from the nearest input point.
     v = np.asarray(mesh.vertices)
