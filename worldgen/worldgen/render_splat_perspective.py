@@ -19,7 +19,7 @@ def load_ply(path: Path):
 
 
 @njit
-def render_persp(xc, yc, zc, scales, quats, colors, opacity, W, H, fx, fy, cyaw, syaw, max_radius):
+def render_persp(xc, yc, zc, scales, quats, colors, opacity, W, H, fx, fy, cyaw, syaw, max_radius, boost):
     img = np.zeros((H, W, 3), np.float32)
     trans = np.zeros((H, W), np.float32)
     n = xc.shape[0]
@@ -83,7 +83,7 @@ def render_persp(xc, yc, zc, scales, quats, colors, opacity, W, H, fx, fy, cyaw,
         u0 = int(np.floor(u))
         v0 = int(np.floor(v))
         inv_det = 1.0 / det
-        op = opacity[i]
+        op = min(1.0, opacity[i] * boost)
         for yy in range(v0 - rad, v0 + rad + 1):
             if yy < 0 or yy >= H:
                 continue
@@ -117,6 +117,7 @@ def main():
     ap.add_argument("--yaw", type=float, default=0.0)
     ap.add_argument("--scale-factor", type=float, default=1.0)
     ap.add_argument("--max-radius", type=int, default=8)
+    ap.add_argument("--opacity-boost", type=float, default=1.0)
     args = ap.parse_args()
 
     v = load_ply(Path(args.ply))
@@ -135,7 +136,7 @@ def main():
     fy = fx
     img = render_persp(xc, yc, zc, (v[:, 10:13] + np.log(args.scale_factor)).astype(np.float32),
                        v[:, 13:17].astype(np.float32), colors, opacity,
-                       args.width, args.height, fx, fy, cy, sy, args.max_radius)
+                       args.width, args.height, fx, fy, cy, sy, args.max_radius, args.opacity_boost)
     Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8)).save(args.out)
     print("perspective", len(v), "->", args.out)
 
