@@ -1,5 +1,7 @@
 # HunyuanWorld-Mirror — Vulkan inference
 
+Hugging Face: <https://huggingface.co/kylinfires/hunyuanworld-vulkan>
+
 Native **Rust + wgpu/Vulkan** inference for
 [HunyuanWorld-Mirror](https://github.com/Tencent-Hunyuan/HunyuanWorld-Mirror),
 running on Windows/Linux with an AMD, NVIDIA, or Intel GPU. No CUDA, no PyTorch
