@@ -1,4 +1,4 @@
-﻿---
+---
 license: apache-2.0
 library_name: rust
 tags:
@@ -13,7 +13,7 @@ tags:
   - amd
 ---
 
-# HunyuanWorld-Mirror 鈥?Vulkan inference
+# HunyuanWorld-Mirror — Vulkan inference
 
 Native **Rust + wgpu/Vulkan** inference for
 [HunyuanWorld-Mirror](https://github.com/Tencent-Hunyuan/HunyuanWorld-Mirror).
@@ -25,16 +25,16 @@ No CUDA or PyTorch at inference time.
 - optional TSDF/Poisson mesh
 - built-in 3DGS render + turntable
 
-Performance: 518脳518 single view 鈮?**11.2 s** on an AMD RX 6900 XT; two views
-鈮?21.5 s (1.26 B params, 5.05 GB f32).
+Performance: 518×518 single view ≈ **11.2 s** on an AMD RX 6900 XT; two views
+≈ 21.5 s (1.26 B params, 5.05 GB f32).
 
 ## Contents
 
-- `src/` 鈥?Rust + WGSL engine (72 transformer blocks, camera head, 4 DPT heads, 3DGS)
-- `scripts/download_weights.py` 鈥?download official weights + build `weights.idx`
-- `scripts/make_mesh.py` 鈥?Open3D TSDF/Poisson mesh
-- `scripts/extract_frames.py` 鈥?OpenCV video frame extraction
-- `docs/` 鈥?outputs
+- `src/` — Rust + WGSL engine (72 transformer blocks, camera head, 4 DPT heads, 3DGS)
+- `scripts/download_weights.py` — download official weights + build `weights.idx`
+- `scripts/make_mesh.py` — Open3D TSDF/Poisson mesh
+- `scripts/extract_frames.py` — OpenCV video frame extraction
+- `docs/` — outputs
 
 **Weights are not included.** Download them from
 [`tencent/HunyuanWorld-Mirror`](https://huggingface.co/tencent/HunyuanWorld-Mirror);
@@ -64,4 +64,3 @@ cargo build --release --bin hwm-vk
 
 Source: Apache-2.0. Model/weights: Tencent HunyuanWorld-Mirror Community License;
 territory restrictions apply. Not affiliated with Tencent.
-

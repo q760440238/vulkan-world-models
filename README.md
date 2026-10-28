@@ -6,6 +6,8 @@
 
 > 本项目是工程移植与验证仓库，不是 LingBot / VkSplat 官方仓库。
 
+Hugging Face 模型页：<https://huggingface.co/kylinfires/hunyuanworld-vulkan>
+
 ---
 
 # 中文
@@ -227,6 +229,8 @@ HunyuanWorld 权重受 **Tencent HunyuanWorld-Mirror Community License** 约束�
 Vulkan / wgpu experiments for running world models and 3D Gaussian Splatting on an **AMD Radeon RX 6900 XT under Windows**, without CUDA.
 
 This is an engineering port and verification repository, not the official LingBot or VkSplat repository.
+
+Hugging Face model page: <https://huggingface.co/kylinfires/hunyuanworld-vulkan>
 
 It contains:
 

@@ -1,18 +1,18 @@
-﻿# HunyuanWorld-Mirror 鈥?Vulkan inference
+# HunyuanWorld-Mirror — Vulkan inference
 
 Native **Rust + wgpu/Vulkan** inference for
 [HunyuanWorld-Mirror](https://github.com/Tencent-Hunyuan/HunyuanWorld-Mirror),
 running on Windows/Linux with an AMD, NVIDIA, or Intel GPU. No CUDA, no PyTorch
 at inference time.
 
-One image or a multi-view set / video 鈫?depth, normals, camera poses, point
+One image or a multi-view set / video → depth, normals, camera poses, point
 cloud, 3D Gaussian Splatting, an optional TSDF/Poisson mesh, and a built-in 3DGS
 render.
 
 ```text
 GPU        AMD Radeon RX 6900 XT 16 GB
 weights    1.26 B params / 5.05 GB f32 / 1544 tensors
-input      518 脳 518 per view
+input      518 × 518 per view
 1 view     11.2 s  (2.5 s weights + 8.6 s GPU forward)
 2 views    21.5 s
 4 views    49.1 s
@@ -32,12 +32,12 @@ input      518 脳 518 per view
 
 ## Features
 
-- **Single image** 鈥?depth / normals / camera / points / 3DGS
-- **Multi-image** 鈥?true `S>1` cross-frame attention; per-view outputs plus a fused point cloud / 3DGS / mesh
-- **Video** 鈥?extract frames with OpenCV, then run the multi-view pipeline
-- **Mesh** 鈥?Open3D TSDF fusion or Poisson reconstruction (`--mesh tsdf|poisson|both`)
-- **3DGS viewer** 鈥?built-in software Gaussian-splat renderer and orbit turntable (`--no-render` to skip)
-- **PLY output** 鈥?standard 17-float 3DGS layout: `f_dc`, opacity, log scale, wxyz quaternion
+- **Single image** — depth / normals / camera / points / 3DGS
+- **Multi-image** — true `S>1` cross-frame attention; per-view outputs plus a fused point cloud / 3DGS / mesh
+- **Video** — extract frames with OpenCV, then run the multi-view pipeline
+- **Mesh** — Open3D TSDF fusion or Poisson reconstruction (`--mesh tsdf|poisson|both`)
+- **3DGS viewer** — built-in software Gaussian-splat renderer and orbit turntable (`--no-render` to skip)
+- **PLY output** — standard 17-float 3DGS layout: `f_dc`, opacity, log scale, wxyz quaternion
 
 ## Requirements
 
@@ -104,13 +104,13 @@ The model is **72 transformer blocks**, not a single ViT:
 | DINOv2 ViT-L/14 backbone | 24 | 1 cls + 4 register + 1369 patch tokens; no RoPE/QK-norm, LN eps 1e-6 |
 | VGT frame blocks | 24 | per-frame attention, QK LayerNorm + 2D RoPE, LN eps 1e-5 |
 | VGT global blocks | 24 | cross-frame attention, QK LayerNorm + 2D RoPE |
-| Camera head | 4 脳 4 | 2048-dim, 16 heads, 4 refinement iterations |
+| Camera head | 4 × 4 | 2048-dim, 16 heads, 4 refinement iterations |
 | DPT heads | 4 | depth / points / normals / GS, 256-channel refinenet |
 
 Token layout:
 
 ```text
-patch grid      37 脳 37 = 1369
+patch grid      37 × 37 = 1369
 DINOv2          1 cls + 4 reg + 1369 patch = 1374
 VGT             1 cam + 4 reg + 1 pose + 1 ray + 1369 patch = 1376
 patch_start_idx 7
@@ -120,11 +120,11 @@ embed dim       1024
 All inference math is implemented in WGSL compute shaders:
 
 - tiled f32 GEMM with bias / GELU / ReLU / SiLU / LayerScale / residual / transposed output
-- LayerNorm, QKV split, QK-norm, 2D RoPE, tiled QK^T 鈫?softmax 鈫?PV attention
+- LayerNorm, QKV split, QK-norm, 2D RoPE, tiled QK^T → softmax → PV attention
 - direct Conv2d (stride/pad/activation, chunked for dispatch limits), ConvTranspose2d
 - bilinear interpolation, DPT UV positional embedding, im2col patch embedding
 - camera-head modulation and 4-step iterative refinement
-- 3DGS activation, depth鈫抴orld, 0.002 voxel weighted merge, PLY export
+- 3DGS activation, depth→world, 0.002 voxel weighted merge, PLY export
 
 CPU is used only for image decode, small parameter activation, camera matrix
 construction, mesh post-process, and PLY/PNG writing.
@@ -133,7 +133,7 @@ construction, mesh post-process, and PLY/PNG writing.
 
 Reference: official PyTorch code + official weights, CPU f32, same inputs.
 
-Single view (518脳518):
+Single view (518×518):
 
 | Stage | max abs error | cosine |
 | --- | ---: | ---: |
@@ -145,7 +145,7 @@ Single view (518脳518):
 | normals | 6.08e-5 | 1.000000 |
 | GS raw | 8.20e-5 | 0.99999994 |
 
-Two-view (`Bright_Room`, 518脳518 each):
+Two-view (`Bright_Room`, 518×518 each):
 
 | Output | max abs error | cosine |
 | --- | ---: | ---: |
@@ -176,7 +176,7 @@ out/
   gsplat/VkSplat or another standard 3DGS renderer.
 - The model outputs point clouds/depth/3DGS, **not a triangle mesh**. Mesh
   export is a separate Open3D post-process (TSDF or Poisson).
-- The CLI defaults to at most 8 views; global attention is O(S虏) in views.
+- The CLI defaults to at most 8 views; global attention is O(S²) in views.
 
 ## License
 
@@ -187,4 +187,3 @@ out/
 - Not affiliated with or endorsed by Tencent.
 
 See `NOTICE` for details.
-
