@@ -1,0 +1,16 @@
+﻿[package]
+name = "hwm-vk"
+version = "0.1.0"
+edition = "2021"
+description = "Native Vulkan (wgpu) inference for HunyuanWorld-Mirror"
+license = "Apache-2.0"
+repository = "https://github.com/q760440238/vulkan-world-models/tree/main/hunyuanworld"
+keywords = ["vulkan", "wgpu", "3d-reconstruction", "gaussian-splatting", "hunyuanworld"]
+categories = ["graphics", "science"]
+
+[dependencies]
+wgpu = "27"
+pollster = "0.4"
+bytemuck = { version = "1", features = ["derive"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+

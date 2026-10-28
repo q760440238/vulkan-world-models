@@ -1,0 +1,3 @@
+﻿huggingface_hub>=0.22
+opencv-python>=4.8
+open3d>=0.19

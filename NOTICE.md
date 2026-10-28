@@ -7,9 +7,12 @@ and result images for experiments with:
 - **VkSplat** (https://github.com/harry7557558/vksplat, Apache-2.0)
 - **SHARP / ml-sharp** (Apple Machine Learning Research Model License)
 - **3D Gaussian Splatting** (INRIA / MPII, non-commercial research license)
+- **HunyuanWorld-Mirror** (Tencent HunyuanWorld-Mirror Community License)
 
 Upstream model weights are not included.
 
 The repository as a whole is distributed under CC BY-NC-SA 4.0 because it
 contains LingBot-derived material. Individual third-party components remain
-under their own licenses.
+under their own licenses. The original Rust/WGSL code in `hunyuanworld/` is
+also made available under Apache-2.0; HunyuanWorld weights and model code
+remain under the Tencent HunyuanWorld-Mirror Community License.

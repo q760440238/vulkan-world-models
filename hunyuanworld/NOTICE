@@ -1,0 +1,26 @@
+# Notice
+
+This repository is an independent Rust/wgpu (Vulkan) inference implementation
+for **HunyuanWorld-Mirror**.
+
+It does **not** include Tencent model weights, Tencent inference source code, or
+any Tencent binary. To run it, you must obtain the official weights from
+<https://huggingface.co/tencent/HunyuanWorld-Mirror> and comply with the
+**Tencent HunyuanWorld-Mirror Community License Agreement** (see
+`LICENSE-TENCENT-HUNYUANWORLD.txt`). That agreement includes territory
+restrictions (it does not apply in the European Union, United Kingdom, or South
+Korea) and acceptable-use terms. The official `Notice.txt` is preserved as
+`NOTICE-TENCENT.txt`.
+
+The original implementation is:
+
+> Tencent HunyuanWorld-Mirror is licensed under the Tencent HunyuanWorld-Mirror
+> Community License Agreement, Copyright © 2025 Tencent. All Rights Reserved.
+> The trademark rights of "Tencent Hunyuan" are owned by Tencent or its affiliate.
+
+The Rust source in this repository is an independent port and is licensed under
+the Apache License 2.0 (see `LICENSE`). That license applies only to the original
+Rust/WGSL code in this repository, not to the Tencent model, weights, or
+documentation.
+
+This project is not affiliated with, endorsed by, or sponsored by Tencent.

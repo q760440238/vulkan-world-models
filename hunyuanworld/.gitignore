@@ -1,0 +1,9 @@
+/target/
+/weights/
+/out/
+*.log
+__pycache__/
+*.pyc
+.venv/
+
+/out*/

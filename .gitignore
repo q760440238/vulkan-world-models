@@ -11,3 +11,7 @@ gaussian_viewer.html
 gaussian_splat_viewer.html
 __pycache__/
 .ipynb_checkpoints/
+
+hunyuanworld/weights/
+hunyuanworld/target/
+hunyuanworld/out*/
