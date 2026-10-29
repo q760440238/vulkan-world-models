@@ -1,4 +1,4 @@
-﻿"""Single image -> FLUX Fill panorama -> DA-2 depth -> Rust 3DGS/mesh."""
+"""Single image -> FLUX Fill panorama -> DA-2 depth -> Rust 3DGS/mesh."""
 
 import argparse
 import os
@@ -75,11 +75,12 @@ def main():
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    gen_w, gen_h = (1024, 512) if args.width >= 1600 else (args.width, args.height)
     prep = out / "prep"
     run([
         sys.executable, str(ROOT / "worldgen/worldgen_i2s_prep.py"),
         "--image", args.image, "--out", str(prep),
-        "--width", str(args.width), "--height", str(args.height),
+        "--width", str(gen_w), "--height", str(gen_h),
     ])
 
     prompt = (
@@ -99,7 +100,7 @@ def main():
         "-p", prompt,
         "-n", "blurry, low quality",
         "--lora-model-dir", str(FLUX),
-        "-W", str(args.width), "-H", str(args.height),
+        "-W", str(gen_w), "-H", str(gen_h),
         "--steps", str(args.steps),
         "--cfg-scale", "1.0",
         "--guidance", "30.0",
@@ -129,9 +130,11 @@ def main():
         m = mask_img.filter(ImageFilter.GaussianBlur(24))
         valid = (1.0 - np.asarray(m).astype(np.float32) / 255.0)[..., None]
         pano = (g * (1.0 - valid) + c * valid).clip(0, 255).astype(np.uint8)
-    Image.fromarray(pano).save(out / "pano.png")
-
-    d = da2_depth(Image.fromarray(pano), args.width, args.height)
+    pano_img = Image.fromarray(pano)
+    if pano_img.size != (args.width, args.height):
+        pano_img = pano_img.resize((args.width, args.height), Image.LANCZOS)
+    pano_img.save(out / "pano.png")
+    d = da2_depth(pano_img, args.width, args.height)
     d.astype("<f4").tofile(out / "depth.f32")
     cpu_mesh = args.mesh_shell or args.cpu_mesh
     run([

@@ -1,4 +1,4 @@
-﻿"""Text -> 360 panorama -> DA-2 depth -> Rust 3DGS/mesh."""
+"""Text -> 360 panorama -> DA-2 depth -> Rust 3DGS/mesh."""
 
 import argparse
 import os
@@ -56,20 +56,23 @@ def main():
         "--t5xxl", str(FLUX / "t5xxl_fp8_e4m3fn.safetensors"),
         "-p", prompt,
         "--lora-model-dir", str(FLUX),
-        "--width", str(args.width),
-        "--height", str(args.height),
+        "--width", str(min(args.width, 1024)),
+        "--height", str(512 if args.width >= 1600 else args.height),
         "--steps", str(args.steps),
         "--cfg-scale", "1.0",
         "--guidance", "3.5",
         "--sampling-method", "euler",
         "--seed", str(args.seed),
         "--circularx",
-        ["--vae-tiling", "--vae-tile-size", ("512x512")],
+        *["--vae-tiling", "--vae-tile-size", "512x512"],
         "--backend", "diffusion=vulkan0",
         "-o", str(out / "pano.png"),
     ])
 
     pano = Image.open(out / "pano.png").convert("RGB")
+    if pano.size != (args.width, args.height):
+        pano = pano.resize((args.width, args.height), Image.LANCZOS)
+        pano.save(out / "pano.png")
     d = da2_depth(pano, args.width, args.height)
     d.astype("<f4").tofile(out / "depth.f32")
     print("depth", d.shape, float(d.min()), float(d.max()), flush=True)
