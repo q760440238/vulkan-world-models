@@ -142,6 +142,17 @@ out/
 
 用任意 3DGS 查看器打开 `gaussians.ply`；mesh 可导入 Blender。
 
+## OneFormer 权重
+
+已下载 `shi-labs/oneformer_ade20k_swin_large` 到本地
+`models/oneformer`（约 1.8GB）。本机 PyTorch 只有 CPU：
+
+```text
+load 19.8 s, infer 4.6 s
+```
+
+它还不能作为 Vulkan GPU 路径；需要 ONNX/ncnn 或 wgpu 移植。
+
 ## GPU 3DGS
 
 `gpu-splat/` is a wgpu/Vulkan 3DGS renderer (no CPU rendering):
