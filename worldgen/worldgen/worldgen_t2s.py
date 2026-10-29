@@ -1,4 +1,4 @@
-"""Text -> 360 panorama -> DA-2 depth -> Rust 3DGS/mesh."""
+﻿"""Text -> 360 panorama -> DA-2 depth -> Rust 3DGS/mesh."""
 
 import argparse
 import os
@@ -17,6 +17,7 @@ FLUX = MODELS / "flux-dev"
 SD = Path(os.environ.get("SD_CLI", ROOT / "tools/sd-cli.exe"))
 WG = Path(os.environ.get("WORLDGEN_VK", ROOT / "tools/worldgen-vk/worldgen-vk.exe"))
 GPU_SPLAT = Path(os.environ.get("GPU_SPLAT", ROOT / "tools/gpu-splat/gpu-splat.exe"))
+GPU_GEOM = Path(os.environ.get("GPU_GEOM", ROOT / "tools/gpu-geom/gpu-geom.exe"))
 
 
 def run(cmd):
@@ -78,14 +79,25 @@ def main():
     print("depth", d.shape, float(d.min()), float(d.max()), flush=True)
 
     cpu_mesh = args.mesh_shell or args.cpu_mesh
-    run([
-        str(WG), "both" if cpu_mesh else "splat",
-        "--pano", str(out / "pano.png"),
-        "--depth", str(out / "depth.f32"),
-        "--width", str(args.width),
-        "--height", str(args.height),
-        "--out", str(out / "scene"),
-    ])
+    (out / "scene").mkdir(parents=True, exist_ok=True)
+    if cpu_mesh:
+        run([
+            str(WG), "both",
+            "--pano", str(out / "pano.png"),
+            "--depth", str(out / "depth.f32"),
+            "--width", str(args.width),
+            "--height", str(args.height),
+            "--out", str(out / "scene"),
+        ])
+    else:
+        run([
+            str(GPU_GEOM),
+            "--pano", str(out / "pano.png"),
+            "--depth", str(out / "depth.f32"),
+            "--width", str(args.width),
+            "--height", str(args.height),
+            "--out", str(out / "scene/gaussians.ply"),
+        ])
     if cpu_mesh:
         if not args.mesh_shell:
             shutil.copy2(out / "scene/mesh.ply", out / "scene/mesh_shell.ply")
@@ -112,6 +124,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

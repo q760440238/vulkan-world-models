@@ -1,0 +1,11 @@
+[package]
+name = "gpu-geom"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+bytemuck = { version = "1", features = ["derive"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+pollster = "0.4"
+wgpu = "27"
