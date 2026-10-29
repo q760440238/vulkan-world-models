@@ -65,13 +65,9 @@ remove Fill object repetition.
 t2s, 1600x800, 10 steps: 739 s
 output: 1,280,000 splats, 1600x800 pano
 
-1600x800 VAE is not clean in this sd.cpp build:
-- no `--vae-tiling`: only a center strip
-- `--vae-tile-size 1024x512`: visible tile seams
-- `--vae-tile-size 512x512`: lattice/grid
-
-1600 is therefore documented but not the recommended quality path; use
-1024x512/20 for the cleanest pano.
+1600x800 is now generated at 1024x512 and LANCZOS-upscaled before DA-2. This
+avoids sd.cpp's broken 1600 VAE path (center strip or tile seams) and produces
+a clean full pano, but it does not add native 1600 detail.
 
 DA-2 native 1600x800 trace:
   graph      da2_trace_1600.ncnn.param/.bin
