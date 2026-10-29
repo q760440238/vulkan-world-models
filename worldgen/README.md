@@ -153,6 +153,23 @@ load 19.8 s, infer 4.6 s
 
 它还不能作为 Vulkan GPU 路径；需要 ONNX/ncnn 或 wgpu 移植。
 
+## GPU geometry
+
+`gpu-geom/` generates the 17-float RGBD gaussians with a wgpu compute shader,
+replacing the CPU `worldgen-vk splat` step:
+
+```powershell
+scripts/build_gpu_geom.ps1
+tools\gpu-geom\gpu-geom.exe `
+  --pano output\rainforest\pano.png `
+  --depth output\rainforest\depth.f32 `
+  --width 1024 --height 512 `
+  --out output\rainforest\scene\gaussians.ply
+```
+
+Confirmed on RX 6900 XT: `gpu-geom.exe` prints the Vulkan adapter and writes
+524,288 17-float gaussians. `--cpu-mesh` still uses the CPU mesh path.
+
 ## GPU 3DGS
 
 `gpu-splat/` is a wgpu/Vulkan 3DGS renderer (no CPU rendering):
