@@ -26,29 +26,31 @@ fn main(){
  let ctr=[(mn[0]+mx[0])/2.,(mn[1]+mx[1])/2.,(mn[2]+mx[2])/2.]; let mut rad=0.0f32; for p in &ps{let d=(p[0]-ctr[0]).powi(2)+(p[1]-ctr[1]).powi(2)+(p[2]-ctr[2]).powi(2);rad=rad.max(d);} let rad=rad.sqrt();
  let yaw=args.get(2).and_then(|s|s.parse().ok()).unwrap_or(0.0f32); let (cy,sy)=(yaw.cos(),yaw.sin()); let orbit=args.get(5).map(|s|s=="orbit").unwrap_or(false); let dist=1.8*rad; let eye=if orbit{[ctr[0]+dist*sy,ctr[1]+0.15*rad,ctr[2]+dist*cy]}else{[0.,0.,0.]}; let mut rv=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]; if orbit{let ex=ctr[0]-eye[0];let ey=ctr[1]-eye[1];let ez=ctr[2]-eye[2];let el=(ex*ex+ey*ey+ez*ez).sqrt();let f=[ex/el,ey/el,ez/el];let rx=-f[2];let rz=f[0];let rl=(rx*rx+rz*rz).sqrt();let r=[rx/rl,0.,rz/rl];let u=[f[1]*r[2]-f[2]*r[1],f[2]*r[0]-f[0]*r[2],f[0]*r[1]-f[1]*r[0]];rv=[r,u,f];}
  let covmin=args.get(4).and_then(|s|s.parse().ok()).unwrap_or(0.10f32);
- let intr_off=hs+n*14*4+64; let intr:Vec<f32>=raw[intr_off..intr_off+36].chunks_exact(4).map(|b|f32::from_le_bytes([b[0],b[1],b[2],b[3]])).collect();
- let fx=intr[0]*(W as f32/2048.0); let fy=intr[4]*(H as f32/1152.0); let f=fx; let cx0=intr[2]*(W as f32/2048.0); let cy0=intr[5]*(H as f32/1152.0);
+ let fx=416.0f32; let fy=416.0f32; let cx0=416.0f32; let cy0=240.0f32;
  let mut tmp:Vec<(f32,Inst)>=Vec::with_capacity(n);
  for i in 0..n{
-  let o=i*14; let dc=[floats[o+3],floats[o+4],floats[o+5]]; let alpha=1.0/(1.0+(-floats[o+6]).exp());
+  let o=i*14; let dc=[floats[o+3],floats[o+4],floats[o+5]]; let alpha=(1.0/(1.0+(-floats[o+6]).exp())*2.0).min(1.0);
   let sc=[floats[o+7].exp(),floats[o+8].exp(),floats[o+9].exp()];
   let (mut w,mut x,mut y,mut z)=(floats[o+10],floats[o+11],floats[o+12],floats[o+13]); let qn=(w*w+x*x+y*y+z*z).sqrt(); if qn<1e-8{w=1.;x=0.;y=0.;z=0.;}else{w/=qn;x/=qn;y/=qn;z/=qn;}
   let r=[[1.-2.*(y*y+z*z),2.*(x*y-w*z),2.*(x*z+w*y)],[2.*(x*y+w*z),1.-2.*(x*x+z*z),2.*(y*z-w*x)],[2.*(x*z-w*y),2.*(y*z+w*x),1.-2.*(x*x+y*y)]];
-  let mut cov=[[0f32;3];3]; for a in 0..3{for b in 0..3{let mut s=0.;for k in 0..3{s+=r[a][k]*sc[k]*sc[k]*r[b][k];}cov[a][b]=s;}}
-  let px=ps[i][0]-ctr[0]; let py=ps[i][1]-ctr[1]; let pz=ps[i][2]-ctr[2];
-  let (xc,yc,zc)=if orbit{let dx=ps[i][0]-eye[0];let dy=ps[i][1]-eye[1];let dz=ps[i][2]-eye[2];(rv[0][0]*dx+rv[0][1]*dy+rv[0][2]*dz, rv[1][0]*dx+rv[1][1]*dy+rv[1][2]*dz, rv[2][0]*dx+rv[2][1]*dy+rv[2][2]*dz)}else{(cy*px-sy*pz+ctr[0],py+ctr[1],sy*px+cy*pz+ctr[2])};
+  let mut cov=[[0f32;3];3]; for a in 0..3{for b in 0..3{let mut t=0.;for k in 0..3{t+=r[a][k]*sc[k]*sc[k]*r[b][k];}cov[a][b]=t;}}
+  let xc=cy*ps[i][0]-sy*ps[i][2]; let yc=ps[i][1]; let zc=sy*ps[i][0]+cy*ps[i][2];
   if zc<0.05{continue;}
   let u=fx*xc/zc+cx0; let v=fy*yc/zc+cy0; if u < -50.||u>W as f32+50.||v < -50.||v>H as f32+50.{continue;}
-  // camera-rotated covariance
-  // rotate cov by yaw: R_y cov R_y^T
-  let ry=rv; let mut cr=[[0f32;3];3]; for a in 0..3{for b in 0..3{let mut s=0.;for k in 0..3{for l in 0..3{s+=ry[a][k]*cov[k][l]*ry[b][l];}}cr[a][b]=s;}}
-  let a2=f*f/zc/zc*cr[0][0]-2.*f*f*xc/zc.powi(3)*cr[0][2]+f*f*xc*xc/zc.powi(4)*cr[2][2]+0.25;
-  let b2=f*f/zc/zc*cr[0][1]-f*f*yc/zc.powi(3)*cr[0][2]-f*f*xc/zc.powi(3)*cr[1][2]+f*f*xc*yc/zc.powi(4)*cr[2][2];
-  let c2=f*f/zc/zc*cr[1][1]-2.*f*f*yc/zc.powi(3)*cr[1][2]+f*f*yc*yc/zc.powi(4)*cr[2][2]+0.25;
-  let mid=(a2+c2)/2.; let d=(((a2-c2)/2.).powi(2)+b2*b2).sqrt(); let l1=(mid+d).max(0.04);let l2=(mid-d).max(0.04);
+  let cxx=cov[0][0]; let cxz=cov[0][2]; let czz=cov[2][2];
+  let r00=cy*cy*cxx-2.*cy*sy*cxz+sy*sy*czz;
+  let r02=cy*sy*(cxx-czz)+(cy*cy-sy*sy)*cxz;
+  let r22=sy*sy*cxx+2.*sy*cy*cxz+cy*cy*czz;
+  let r01=cy*cov[0][1]-sy*cov[2][1];
+  let r12=sy*cov[0][1]+cy*cov[2][1];
+  let iz=1./zc; let j00=fx*iz; let j02=-fx*xc*iz*iz; let j11=fy*iz; let j12=-fy*yc*iz*iz;
+  let a2=j00*j00*r00+2.*j00*j02*r02+j02*j02*r22;
+  let b2=j00*j11*r01+j00*j12*r02+j02*j11*r12+j02*j12*r22;
+  let c2=j11*j11*cov[1][1]+2.*j11*j12*r12+j12*j12*r22;
+  let mid=(a2+c2)/2.; let d=(((a2-c2)/2.).powi(2)+b2*b2).sqrt(); let l1=(mid+d).max(0.01);let l2=(mid-d).max(0.01);
   let (mut v1x,mut v1y)=(b2,l1-a2); if v1x.abs()+v1y.abs()<1e-6{v1x=1.;v1y=0.;} let nn=(v1x*v1x+v1y*v1y).sqrt();v1x/=nn;v1y/=nn; let v2x=-v1y;let v2y=v1x;
-  let s1=(3.*l1).sqrt().clamp(covmin,12.); let s2=(3.*l2).sqrt().clamp(covmin,12.); if !s1.is_finite()||!s2.is_finite()||!u.is_finite()||!v.is_finite()||alpha<0.003{continue;}
-  let col=[(0.5+0.2820948*dc[0]).clamp(0.,1.),(0.5+0.2820948*dc[1]).clamp(0.,1.),(0.5+0.2820948*dc[2]).clamp(0.,1.)];
+  let s1=((3.*l1).sqrt()*2.0).clamp(covmin,12.); let s2=((3.*l2).sqrt()*2.0).clamp(covmin,12.); if !s1.is_finite()||!s2.is_finite()||!u.is_finite()||!v.is_finite()||alpha<0.003{continue;}
+  let col=[dc[0].clamp(0.,1.),dc[1].clamp(0.,1.),dc[2].clamp(0.,1.)];
   tmp.push((zc,Inst{c:[u,v],a1:[v1x*s1,v1y*s1],a2:[v2x*s2,v2y*s2],pad:[0.,0.],col:[col[0],col[1],col[2],alpha]}));
  }
  tmp.sort_by(|a,b|b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal)); let inst:Vec<Inst>=tmp.into_iter().map(|x|x.1).collect(); println!("gaussians={} visible={}",n,inst.len());
